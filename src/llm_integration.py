@@ -155,24 +155,87 @@ class LLMIntegration:
         """Initialize the LLM based on provider."""
         try:
             if self.provider == LLMProvider.OLLAMA.value:
+                # Import required modules
+                import subprocess
+                import time
+                import requests
+
+                # Check if Ollama is running
+                try:
+                    response = requests.get("http://localhost:11434/api/version")
+                    if response.status_code != 200:
+                        # Start Ollama if not running
+                        logger.info("Starting Ollama server...")
+                        subprocess.Popen(["ollama", "serve"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        # Wait for Ollama to start
+                        for _ in range(10):
+                            try:
+                                response = requests.get("http://localhost:11434/api/version")
+                                if response.status_code == 200:
+                                    logger.info("Ollama server started successfully")
+                                    break
+                            except:
+                                pass
+                            time.sleep(1)
+                except:
+                    # Start Ollama if not running
+                    logger.info("Starting Ollama server...")
+                    subprocess.Popen(["ollama", "serve"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    # Wait for Ollama to start
+                    time.sleep(5)
+
+                # Check if the model is available
+                try:
+                    response = requests.get(f"http://localhost:11434/api/show?name={self.model}")
+                    if response.status_code != 200:
+                        # Pull the model if not available
+                        logger.info(f"Pulling {self.model} model...")
+                        subprocess.run(["ollama", "pull", self.model], check=True)
+                except:
+                    # Pull the model if not available
+                    logger.info(f"Pulling {self.model} model...")
+                    subprocess.run(["ollama", "pull", self.model], check=True)
+
+                # Initialize the LLM
                 Ollama = import_optional("langchain_community.llms.Ollama")
                 if not Ollama:
                     raise ImportError("Failed to import Ollama")
-                self.llm = Ollama(model=self.model)
+
+                # Initialize with specific parameters for better performance
+                self.llm = Ollama(
+                    model=self.model,
+                    num_ctx=8192,  # Large context window
+                    num_predict=2048,  # Reasonable output length
+                    temperature=0.7,  # Balanced creativity
+                    top_k=40,  # Diverse token selection
+                    top_p=0.9,  # Nucleus sampling
+                    repeat_penalty=1.1  # Avoid repetition
+                )
                 logger.info(f"Initialized Ollama LLM with model: {self.model}")
 
             elif self.provider == LLMProvider.OPENAI.value:
                 ChatOpenAI = import_optional("langchain_openai.ChatOpenAI")
                 if not ChatOpenAI:
                     raise ImportError("Failed to import ChatOpenAI")
-                self.llm = ChatOpenAI(api_key=self.api_key, base_url=self.endpoint)
+                self.llm = ChatOpenAI(
+                    api_key=self.api_key,
+                    base_url=self.endpoint,
+                    temperature=0.7,
+                    max_tokens=2048
+                )
                 logger.info(f"Initialized OpenAI LLM with endpoint: {self.endpoint}")
 
             elif self.provider == LLMProvider.HUGGINGFACE.value:
                 HuggingFaceEndpoint = import_optional("langchain_community.llms.HuggingFaceEndpoint")
                 if not HuggingFaceEndpoint:
                     raise ImportError("Failed to import HuggingFaceEndpoint")
-                self.llm = HuggingFaceEndpoint(endpoint_url=self.endpoint)
+                self.llm = HuggingFaceEndpoint(
+                    endpoint_url=self.endpoint,
+                    huggingfacehub_api_token=self.api_key,
+                    task="text-generation",
+                    max_new_tokens=2048,
+                    temperature=0.7
+                )
                 logger.info(f"Initialized HuggingFace LLM with endpoint: {self.endpoint}")
 
             elif self.provider == LLMProvider.CUSTOM.value:
@@ -339,18 +402,67 @@ class LLMIntegration:
         if self.model != "phi-4-multimodal":
             raise ValueError(f"Image analysis not supported for model: {self.model}")
 
-        # Read the image and convert to base64
-        with open(image_path, "rb") as f:
-            image_data = f.read()
-            image_base64 = base64.b64encode(image_data).decode("utf-8")
+        # Import required modules
+        import os
+        from PIL import Image
+        import tempfile
 
-        # Create a prompt with the image
-        prompt = PROMPT_TEMPLATES["image_analysis"].replace("[IMAGE]", f"data:image/jpeg;base64,{image_base64}")
+        # Check if the image exists
+        if not os.path.exists(image_path):
+            raise FileNotFoundError(f"Image not found: {image_path}")
 
-        # Invoke the LLM
-        response = self.invoke(prompt)
+        # Process the image
+        try:
+            # Open the image with PIL
+            img = Image.open(image_path)
 
-        return response
+            # Resize if too large (Phi-4-multimodal has limits)
+            max_size = 1024
+            if img.width > max_size or img.height > max_size:
+                # Maintain aspect ratio
+                if img.width > img.height:
+                    new_width = max_size
+                    new_height = int(img.height * (max_size / img.width))
+                else:
+                    new_height = max_size
+                    new_width = int(img.width * (max_size / img.height))
+
+                # Resize the image
+                img = img.resize((new_width, new_height), Image.LANCZOS)
+
+                # Save to a temporary file
+                temp_path = tempfile.mktemp(suffix=".jpg")
+                img.save(temp_path, format="JPEG", quality=85)
+                image_path = temp_path
+
+            # Read the image and convert to base64
+            with open(image_path, "rb") as f:
+                image_data = f.read()
+                image_base64 = base64.b64encode(image_data).decode("utf-8")
+
+            # Determine image format
+            img_format = image_path.split(".")[-1].lower()
+            if img_format not in ["jpg", "jpeg", "png", "gif", "webp"]:
+                img_format = "jpeg"  # Default to JPEG
+
+            # Create a prompt with the image
+            prompt = PROMPT_TEMPLATES["image_analysis"].replace(
+                "[IMAGE]",
+                f"data:image/{img_format};base64,{image_base64}"
+            )
+
+            # Invoke the LLM
+            response = self.invoke(prompt)
+
+            # Clean up temporary file if created
+            if 'temp_path' in locals() and os.path.exists(temp_path):
+                os.unlink(temp_path)
+
+            return response
+
+        except Exception as e:
+            logger.error(f"Image analysis failed: {str(e)}")
+            raise RuntimeError(f"Image analysis failed: {str(e)}")
 
 
 # Create a singleton instance

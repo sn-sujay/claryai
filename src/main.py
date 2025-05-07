@@ -174,7 +174,7 @@ def parse_file(file_obj):
 if USE_LLM:
     try:
         # Use the LLM integration module
-        from src.llm_integration import get_llm_integration
+        from src.llm_integration import get_llm_integration, PROMPT_TEMPLATES
         llm_integration = get_llm_integration()
         if llm_integration:
             llm = llm_integration
@@ -567,13 +567,17 @@ async def root():
 @app.post("/analyze_image")
 async def analyze_image(
     file: UploadFile = File(...),
-    api_key: str = None
+    api_key: str = None,
+    extract_text: bool = False,
+    detect_objects: bool = False
 ):
     """
     Analyze an image using the LLM.
 
     - **file**: Uploaded image file
     - **api_key**: API key for authentication
+    - **extract_text**: Whether to extract text from the image
+    - **detect_objects**: Whether to detect objects in the image
     """
     if not USE_LLM:
         raise HTTPException(status_code=400, detail="LLM integration is disabled")
@@ -584,8 +588,17 @@ async def analyze_image(
     if not api_key or not validate_api_key(api_key):
         raise HTTPException(status_code=401, detail="API key required")
 
+    # Validate file type
+    allowed_extensions = ["jpg", "jpeg", "png", "gif", "webp"]
+    file_extension = file.filename.split(".")[-1].lower()
+    if file_extension not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type. Allowed types: {', '.join(allowed_extensions)}"
+        )
+
     # Save uploaded file to temp location
-    tmp_path = tempfile.mktemp(suffix=f".{file.filename.split('.')[-1]}")
+    tmp_path = tempfile.mktemp(suffix=f".{file_extension}")
     with open(tmp_path, "wb") as f:
         content = await file.read()
         f.write(content)
@@ -593,8 +606,29 @@ async def analyze_image(
     try:
         # Analyze the image
         if hasattr(llm, 'analyze_image'):
+            # Create a custom prompt based on user requirements
+            custom_prompt = PROMPT_TEMPLATES["image_analysis"]
+            if extract_text:
+                custom_prompt = custom_prompt.replace(
+                    "2. Any text visible in the image",
+                    "2. Extract ALL text visible in the image with high accuracy"
+                )
+            if detect_objects:
+                custom_prompt = custom_prompt.replace(
+                    "3. Key objects or people",
+                    "3. Detect and list ALL objects and people in the image with their positions"
+                )
+
+            # Analyze the image
             analysis = llm.analyze_image(tmp_path)
-            return {"analysis": analysis}
+
+            # Try to parse as JSON if possible
+            try:
+                result = json.loads(analysis)
+                return {"analysis": result, "format": "json"}
+            except json.JSONDecodeError:
+                # Return as text if not valid JSON
+                return {"analysis": analysis, "format": "text"}
         else:
             raise HTTPException(status_code=400, detail="Image analysis not supported by the current LLM integration")
     except Exception as e:
@@ -604,6 +638,7 @@ async def analyze_image(
         # Ensure zero data retention
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
+            logger.info(f"Temporary file deleted: {tmp_path}")
 
 @app.post("/parse")
 async def parse_document_endpoint(

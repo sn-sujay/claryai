@@ -259,12 +259,41 @@ The analyze image endpoint is used to analyze images using the Phi-4-multimodal 
 
 - `file`: Uploaded image file
 - `api_key`: API key for authentication
+- `extract_text`: Whether to extract text from the image (optional, default: false)
+- `detect_objects`: Whether to detect objects in the image (optional, default: false)
 
-**Example:**
+**Supported Image Formats:**
+- JPEG/JPG
+- PNG
+- GIF
+- WebP
+
+**Example 1: Basic Image Analysis**
 
 ```bash
 curl -X POST "http://localhost:8080/analyze_image?api_key=123e4567-e89b-12d3-a456-426614174000" \
   -F "file=@sample_image.jpg"
+```
+
+**Example 2: Extract Text from Image**
+
+```bash
+curl -X POST "http://localhost:8080/analyze_image?api_key=123e4567-e89b-12d3-a456-426614174000&extract_text=true" \
+  -F "file=@document_scan.jpg"
+```
+
+**Example 3: Detect Objects in Image**
+
+```bash
+curl -X POST "http://localhost:8080/analyze_image?api_key=123e4567-e89b-12d3-a456-426614174000&detect_objects=true" \
+  -F "file=@scene.jpg"
+```
+
+**Example 4: Extract Text and Detect Objects**
+
+```bash
+curl -X POST "http://localhost:8080/analyze_image?api_key=123e4567-e89b-12d3-a456-426614174000&extract_text=true&detect_objects=true" \
+  -F "file=@complex_image.jpg"
 ```
 
 ## Chunking Strategies
