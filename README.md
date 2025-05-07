@@ -25,21 +25,56 @@ ClaryAI is a comprehensive document parsing solution that uses Unstructured.io f
 
 1. Clone the repository: `git clone https://github.com/sn-sujay/claryai.git`
 2. Navigate to the directory: `cd claryai`
-3. Run the Docker Compose setup: `./run.sh`
+3. Run the deployment script: `./deploy.sh`
 
-This will start:
-- ClaryAI API server on port 8080
-- Redis for caching and queuing on port 6379
-- Redis Commander UI on port 8081
-- Worker for asynchronous processing
+This will:
+- Build and push Docker images to Docker Hub
+- Start the ClaryAI API server on port 8000
+- Start Redis for caching and queuing on port 6379
+- Set up Nginx for SSL termination and load balancing
+- Configure worker for asynchronous processing
+
+For development, you can use:
+```bash
+# Start the full stack with LLM
+docker-compose up -d
+
+# Start the slim version without LLM
+docker-compose --profile slim up -d
+
+# Start with development tools (Redis Commander)
+docker-compose --profile dev up -d
+```
 
 ### Using Docker (Manual)
 
-1. Pull image: `docker pull sn-sujay/claryai:slim` or `sn-sujay/claryai:latest`
-2. Run slim: `docker run -d -p 8000:8000 -e USE_LLM=false sn-sujay/claryai:slim`
-3. Run full: `docker run -d -p 8000:8000 -e USE_LLM=true -e LLM_MODEL=phi-4-multimodal sn-sujay/claryai:latest`
-4. Custom LLM: `docker run -e USE_LLM=true -e LLM_ENDPOINT=http://localhost:9000 -e OPENAI_API_KEY=sk-...`
-5. Offline: Save (`docker save sn-sujay/claryai > claryai.tar`), load (`docker load -i claryai.tar`).
+1. Pull image: `docker pull claryai/claryai:latest` (full version with LLM)
+2. Pull image: `docker pull claryai/claryai:slim` (slim version without LLM)
+3. Run slim: `docker run -d -p 8000:8000 -e USE_LLM=false claryai/claryai:slim`
+4. Run full: `docker run -d -p 8000:8000 -e USE_LLM=true -e LLM_MODEL=phi-4-multimodal claryai/claryai:latest`
+5. Custom LLM: `docker run -e USE_LLM=true -e LLM_ENDPOINT=http://localhost:9000 -e OPENAI_API_KEY=sk-...`
+6. Offline: Save (`docker save claryai/claryai > claryai.tar`), load (`docker load -i claryai.tar`).
+
+### Production Deployment
+
+For production deployment, follow these steps:
+
+1. Set up a server with Docker and Docker Compose installed
+2. Clone the repository: `git clone https://github.com/sn-sujay/claryai.git`
+3. Navigate to the directory: `cd claryai`
+4. Update the Nginx configuration in `nginx/conf.d/claryai.conf` with your domain
+5. Generate SSL certificates for your domain:
+   ```bash
+   # Using Let's Encrypt (recommended)
+   certbot certonly --webroot -w /var/www/html -d yourdomain.com
+
+   # Copy certificates to nginx/ssl
+   cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem nginx/ssl/claryai.crt
+   cp /etc/letsencrypt/live/yourdomain.com/privkey.pem nginx/ssl/claryai.key
+   ```
+6. Update environment variables in `docker-compose.yml` with secure API keys
+7. Run the deployment script: `./deploy.sh`
+8. Set up monitoring and backups for production use
 
 ## Endpoints
 
@@ -49,6 +84,7 @@ This will start:
 - **POST /agent**: Perform agentic tasks (LLM required).
 - **POST /match**: Three-way matching for invoices, POs, GRNs. Supports both file uploads and task IDs.
 - **GET /status/{task_id}**: Check async task status. Supports including results with `include_result=true`.
+- **POST /analyze_image**: Analyze images using Phi-4-multimodal. Supports text extraction and object detection.
 
 ## Asynchronous Processing
 
@@ -63,11 +99,12 @@ The asynchronous processing system uses Redis for queuing and a dedicated worker
 
 ## Data Sources
 
-- Files: PDF, DOCX, JPG, PNG, PPTX, TXT, etc.
-- SQL: PostgreSQL, MySQL, SQLite.
-- APIs: REST endpoints.
-- Web: HTML pages.
-- Cloud: Google Drive, S3, Dropbox.
+- **Files**: PDF, DOCX, JPG, PNG, PPTX, TXT, etc.
+- **SQL**: PostgreSQL, MySQL, SQLite.
+- **APIs**: REST endpoints.
+- **Web**: HTML pages.
+- **Cloud Storage**: Google Drive, S3, Dropbox, Azure Blob Storage, Box.
+- **Data Sources**: Notion, GitHub, MongoDB, Slack, Confluence, Couchbase, Elasticsearch.
 
 ## Getting Started
 

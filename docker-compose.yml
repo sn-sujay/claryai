@@ -1,29 +1,74 @@
 version: '3.8'
 
 services:
+  # Main ClaryAI API service
   claryai:
     build:
       context: .
+      dockerfile: Dockerfile
+    image: claryai/claryai:latest
+    container_name: claryai
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - USE_LLM=true
+      - LLM_MODEL=phi-4-multimodal
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - API_KEYS=123e4567-e89b-12d3-a456-426614174000,00112233-4455-6677-8899-aabbccddeeff
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - redis
+    networks:
+      - claryai-network
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # Slim version without LLM for lightweight deployments
+  claryai-slim:
+    build:
+      context: .
       dockerfile: Dockerfile.slim
-    image: claryai:slim
+    image: claryai/claryai:slim
     container_name: claryai-slim
     ports:
       - "8080:8000"
     volumes:
       - ./data:/app/data
     environment:
+      - USE_LLM=false
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_DB=0
+      - API_KEYS=123e4567-e89b-12d3-a456-426614174000
     depends_on:
       - redis
+    networks:
+      - claryai-network
     restart: unless-stopped
+    profiles: ["slim"]
 
+  # Worker for background processing
   worker:
     build:
       context: .
       dockerfile: Dockerfile.worker
-    image: claryai:worker
+    image: claryai/claryai:worker
     container_name: claryai-worker
     volumes:
       - ./data:/app/data
@@ -34,18 +79,46 @@ services:
     depends_on:
       - redis
       - claryai
+    networks:
+      - claryai-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
 
+  # Redis for caching and task queue
   redis:
-    image: redis:alpine
+    image: redis:7-alpine
     container_name: claryai-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
-    restart: unless-stopped
     command: redis-server --appendonly yes
+    networks:
+      - claryai-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
 
+  # Redis Commander for monitoring Redis
   redis-commander:
     image: rediscommander/redis-commander:latest
     container_name: claryai-redis-commander
@@ -55,7 +128,52 @@ services:
       - REDIS_HOSTS=local:redis:6379
     depends_on:
       - redis
+    networks:
+      - claryai-network
     restart: unless-stopped
+    profiles: ["dev"]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # Nginx for SSL termination and load balancing
+  nginx:
+    image: nginx:alpine
+    container_name: claryai-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/www:/var/www/html
+    depends_on:
+      - claryai
+    networks:
+      - claryai-network
+    profiles: ["prod"]
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
 
 volumes:
   redis-data:
+    driver: local
+
+networks:
+  claryai-network:
+    driver: bridge
