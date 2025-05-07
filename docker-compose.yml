@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  claryai:
+    build:
+      context: .
+      dockerfile: Dockerfile.slim
+    image: claryai:slim
+    container_name: claryai-slim
+    ports:
+      - "8080:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    image: claryai:worker
+    container_name: claryai-worker
+    volumes:
+      - ./data:/app/data
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    depends_on:
+      - redis
+      - claryai
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    container_name: claryai-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: claryai-redis-commander
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+volumes:
+  redis-data:

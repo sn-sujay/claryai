@@ -1,0 +1,37 @@
+INVOICE
+
+Invoice Number: INV-2023-001
+Date: May 7, 2023
+Due Date: June 7, 2023
+
+Vendor:
+Acme Corporation
+123 Main Street
+Anytown, USA
+Email: billing@acmecorp.com
+Phone: (555) 123-4567
+
+Bill To:
+XYZ Company
+456 Business Ave
+Somewhere, USA
+Email: accounts@xyzcompany.com
+Phone: (555) 987-6543
+
+Purchase Order: PO-2023-001
+
+| Item                  | Quantity | Unit Price | Total    |
+|-----------------------|----------|------------|----------|
+| Widget A              | 5        | $10.00     | $50.00   |
+| Widget B              | 2        | $15.00     | $30.00   |
+| Premium Support       | 1        | $100.00    | $100.00  |
+| Extra Service         | 1        | $50.00     | $50.00   |
+
+Subtotal: $230.00
+Tax (10%): $23.00
+Total: $253.00
+
+Payment Terms: Net 30
+Payment Method: Bank Transfer
+
+Thank you for your business!

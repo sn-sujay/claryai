@@ -1,0 +1,31 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install dependencies
+RUN apt-get update && apt-get install -y tesseract-ocr
+RUN pip install --no-cache-dir unstructured[all-docs] llama-index fastapi uvicorn requests beautifulsoup4 pandas redis sqlalchemy
+
+# Copy source files
+COPY src/worker.py .
+COPY src/table_parser.py .
+COPY src/redis_client.py .
+
+# Create non-root user
+RUN useradd -m appuser
+
+# Create data directory and set permissions
+RUN mkdir -p /app/data/uploads && chown -R appuser:appuser /app/data
+
+# Switch to non-root user
+USER appuser
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV DB_PATH=/app/data/claryai.db
+ENV REDIS_HOST=redis
+ENV REDIS_PORT=6379
+ENV REDIS_DB=0
+
+# Run worker
+CMD ["python", "worker.py"]

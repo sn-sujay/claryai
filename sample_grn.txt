@@ -1,0 +1,36 @@
+GOODS RECEIPT NOTE
+
+GRN Number: GRN-2023-001
+Date: May 5, 2023
+
+Receiver:
+XYZ Company
+456 Business Ave
+Somewhere, USA
+Email: warehouse@xyzcompany.com
+Phone: (555) 987-6543
+
+Supplier:
+Acme Corporation
+123 Main Street
+Anytown, USA
+Email: shipping@acmecorp.com
+Phone: (555) 123-4567
+
+Purchase Order: PO-2023-001
+Delivery Note: DN-2023-001
+
+| Item                  | Ordered | Received | Condition  |
+|-----------------------|---------|----------|------------|
+| Widget A              | 5       | 5        | Good       |
+| Widget B              | 3       | 3        | Good       |
+| Premium Support       | 1       | 1        | N/A        |
+
+Inspection Notes:
+All items received in good condition. No damages or defects observed.
+
+Received by: Jane Doe
+Title: Warehouse Manager
+Signature: Jane Doe
+
+Date and Time of Receipt: May 5, 2023, 10:30 AM

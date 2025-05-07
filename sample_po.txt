@@ -1,0 +1,39 @@
+PURCHASE ORDER
+
+PO Number: PO-2023-001
+Date: April 15, 2023
+
+Buyer:
+XYZ Company
+456 Business Ave
+Somewhere, USA
+Email: accounts@xyzcompany.com
+Phone: (555) 987-6543
+
+Supplier:
+Acme Corporation
+123 Main Street
+Anytown, USA
+Email: sales@acmecorp.com
+Phone: (555) 123-4567
+
+Delivery Date: May 1, 2023
+Delivery Address: 456 Business Ave, Somewhere, USA
+
+| Item                  | Quantity | Unit Price | Total    |
+|-----------------------|----------|------------|----------|
+| Widget A              | 5        | $10.00     | $50.00   |
+| Widget B              | 3        | $15.00     | $45.00   |
+| Premium Support       | 1        | $100.00    | $100.00  |
+
+Subtotal: $195.00
+Tax (10%): $19.50
+Total: $214.50
+
+Terms and Conditions:
+1. Payment terms: Net 30
+2. Delivery method: Standard shipping
+3. Warranty: 1 year
+
+Authorized by: John Smith
+Title: Procurement Manager
