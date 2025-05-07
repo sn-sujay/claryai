@@ -388,7 +388,8 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
                 # Example: mongodb://{"connection_string":"mongodb://..."}/database.collection
                 # Example: slack://{"token":"xyz"}/channel_id
 
-                from src.additional_connectors import get_connector as get_datasource_connector
+                # Try to import from additional_connectors first, then from more_connectors
+                connector = None
                 import json
 
                 # Parse the URL
@@ -423,8 +424,21 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
                     # Parse credentials
                     credentials = json.loads(credentials_json)
 
-                    # Get the appropriate connector
-                    connector = get_datasource_connector(provider)
+                    # Try to get the connector from additional_connectors
+                    try:
+                        from src.additional_connectors import get_connector as get_datasource_connector
+                        connector = get_datasource_connector(provider)
+                    except (ImportError, AttributeError):
+                        connector = None
+
+                    # If not found, try to get from more_connectors
+                    if not connector:
+                        try:
+                            from src.more_connectors import get_connector as get_more_connector
+                            connector = get_more_connector(provider)
+                        except (ImportError, AttributeError):
+                            connector = None
+
                     if not connector:
                         raise ValueError(f"Unsupported data source provider: {provider}")
 

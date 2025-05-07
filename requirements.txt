@@ -32,3 +32,13 @@ slack-sdk>=3.26.0
 PyGithub>=2.1.1
 python-gitlab>=4.4.0
 msal>=1.26.0
+
+# More data source connectors
+azure-storage-blob>=12.19.0
+boxsdk>=3.9.1
+couchbase>=4.1.12
+google-cloud-storage>=2.14.0
+jira>=3.6.0
+kafka-python>=2.0.2
+snowflake-connector-python>=3.6.0
+zenpy>=2.0.40

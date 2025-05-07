@@ -124,14 +124,38 @@ curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614
 curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&source_type=datasource&source_url=slack://{\"token\":\"your_slack_token\"}/channel_id"
 ```
 
-**Example 10: Parse a file with a specific chunking strategy**
+**Example 10: Parse data from Azure Blob Storage**
+
+```bash
+curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&source_type=datasource&source_url=azure://{\"connection_string\":\"your_connection_string\"}/container/blob_name"
+```
+
+**Example 11: Parse data from Box**
+
+```bash
+curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&source_type=datasource&source_url=box://{\"client_id\":\"your_client_id\",\"client_secret\":\"your_client_secret\",\"access_token\":\"your_access_token\"}/file_id"
+```
+
+**Example 12: Parse data from Couchbase**
+
+```bash
+curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&source_type=datasource&source_url=couchbase://{\"connection_string\":\"couchbase://localhost\",\"username\":\"user\",\"password\":\"pass\"}/bucket.scope.collection:document_id"
+```
+
+**Example 13: Parse data from Elasticsearch**
+
+```bash
+curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&source_type=datasource&source_url=elasticsearch://{\"hosts\":\"http://localhost:9200\"}/index:document_id"
+```
+
+**Example 14: Parse a file with a specific chunking strategy**
 
 ```bash
 curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&chunk_strategy=sentence" \
   -F "file=@large_document.txt"
 ```
 
-**Example 11: Parse a file asynchronously**
+**Example 15: Parse a file asynchronously**
 
 ```bash
 curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&async=true" \
