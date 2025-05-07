@@ -1,0 +1,1 @@
+FROM ./phi-4-multimodal.gguf
