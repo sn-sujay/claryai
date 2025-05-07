@@ -14,6 +14,7 @@ This guide provides detailed information on how to use the ClaryAI API, includin
    - [Agent Endpoint](#agent-endpoint)
    - [Match Endpoint](#match-endpoint)
    - [Status Endpoint](#status-endpoint)
+   - [Analyze Image Endpoint](#analyze-image-endpoint)
 4. [Chunking Strategies](#chunking-strategies)
 5. [Asynchronous Processing](#asynchronous-processing)
 6. [Error Handling](#error-handling)
@@ -50,9 +51,11 @@ GET http://localhost:8080/
   "description": "A self-hosted API for parsing documents into LLM-ready JSON outputs with zero data retention.",
   "version": "0.1.0",
   "endpoints": [
-    "/parse", "/query", "/generate_schema", "/agent", "/match", "/status/{task_id}"
+    "/parse", "/query", "/generate_schema", "/agent", "/match", "/status/{task_id}", "/analyze_image"
   ],
-  "llm_enabled": false
+  "llm_enabled": true,
+  "llm_model": "phi-4-multimodal",
+  "multimodal_enabled": true
 }
 ```
 
@@ -246,6 +249,22 @@ The status endpoint is used to check the status of asynchronous tasks.
 
 ```bash
 curl -X GET "http://localhost:8080/status/550e8400-e29b-41d4-a716-446655440000?api_key=123e4567-e89b-12d3-a456-426614174000"
+```
+
+### Analyze Image Endpoint
+
+The analyze image endpoint is used to analyze images using the Phi-4-multimodal model. Note that this endpoint requires LLM integration to be enabled with the Phi-4-multimodal model.
+
+**Parameters:**
+
+- `file`: Uploaded image file
+- `api_key`: API key for authentication
+
+**Example:**
+
+```bash
+curl -X POST "http://localhost:8080/analyze_image?api_key=123e4567-e89b-12d3-a456-426614174000" \
+  -F "file=@sample_image.jpg"
 ```
 
 ## Chunking Strategies

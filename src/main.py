@@ -173,22 +173,18 @@ def parse_file(file_obj):
 # Initialize LLM if enabled
 if USE_LLM:
     try:
-        if LLM_ENDPOINT:
-            # Initialize LLM based on endpoint type
-            if "openai" in LLM_ENDPOINT:
-                from langchain_openai import ChatOpenAI
-                llm = ChatOpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=LLM_ENDPOINT)
-            else:
-                from langchain_community.llms import HuggingFaceEndpoint
-                llm = HuggingFaceEndpoint(endpoint_url=LLM_ENDPOINT)
+        # Use the LLM integration module
+        from src.llm_integration import get_llm_integration
+        llm_integration = get_llm_integration()
+        if llm_integration:
+            llm = llm_integration
+            logger.info(f"LLM initialized successfully with model: {llm_integration.model}")
         else:
-            # Use local Ollama model if no endpoint is specified
-            from langchain_community.llms import Ollama
-            llm = Ollama(model=LLM_MODEL or "phi-4-multimodal")
-        logger.info("LLM initialized successfully")
-    except ImportError:
+            USE_LLM = False
+            logger.warning("LLM integration not available. LLM features disabled.")
+    except ImportError as e:
         USE_LLM = False
-        logger.warning("LLM dependencies not available. LLM features disabled.")
+        logger.warning(f"LLM dependencies not available. LLM features disabled. Error: {str(e)}")
 
 # Parse document function
 async def parse_document(file: Optional[UploadFile] = None, source_type: str = "file",
@@ -496,9 +492,12 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
                 # Refine elements with LLM
                 prompt = f"Refine these document elements to improve structure and readability: {json.dumps(elements)}"
                 response = llm.invoke(prompt)
-                refined_elements = json.loads(str(response))
-                if isinstance(refined_elements, list):
-                    elements = refined_elements
+                try:
+                    refined_elements = json.loads(str(response))
+                    if isinstance(refined_elements, list):
+                        elements = refined_elements
+                except json.JSONDecodeError:
+                    logger.warning("LLM response is not valid JSON, using original elements")
             except Exception as e:
                 logger.error(f"LLM refinement failed: {str(e)}")
 
@@ -558,10 +557,53 @@ async def root():
         "description": "A self-hosted API for parsing documents into LLM-ready JSON outputs with zero data retention.",
         "version": "0.1.0",
         "endpoints": [
-            "/parse", "/query", "/generate_schema", "/agent", "/match", "/status/{task_id}"
+            "/parse", "/query", "/generate_schema", "/agent", "/match", "/status/{task_id}", "/analyze_image"
         ],
-        "llm_enabled": USE_LLM
+        "llm_enabled": USE_LLM,
+        "llm_model": LLM_MODEL if USE_LLM else None,
+        "multimodal_enabled": USE_LLM and LLM_MODEL == "phi-4-multimodal"
     }
+
+@app.post("/analyze_image")
+async def analyze_image(
+    file: UploadFile = File(...),
+    api_key: str = None
+):
+    """
+    Analyze an image using the LLM.
+
+    - **file**: Uploaded image file
+    - **api_key**: API key for authentication
+    """
+    if not USE_LLM:
+        raise HTTPException(status_code=400, detail="LLM integration is disabled")
+
+    if LLM_MODEL != "phi-4-multimodal":
+        raise HTTPException(status_code=400, detail="Image analysis requires phi-4-multimodal model")
+
+    if not api_key or not validate_api_key(api_key):
+        raise HTTPException(status_code=401, detail="API key required")
+
+    # Save uploaded file to temp location
+    tmp_path = tempfile.mktemp(suffix=f".{file.filename.split('.')[-1]}")
+    with open(tmp_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+
+    try:
+        # Analyze the image
+        if hasattr(llm, 'analyze_image'):
+            analysis = llm.analyze_image(tmp_path)
+            return {"analysis": analysis}
+        else:
+            raise HTTPException(status_code=400, detail="Image analysis not supported by the current LLM integration")
+    except Exception as e:
+        logger.error(f"Image analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Image analysis failed: {str(e)}")
+    finally:
+        # Ensure zero data retention
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
 @app.post("/parse")
 async def parse_document_endpoint(
@@ -705,11 +747,19 @@ async def query_document(query: str, api_key: str = None, use_cache: bool = True
         response = llm.invoke(query)
         response_text = str(response)
 
-        # Cache response if Redis is available
-        if use_cache and redis_client.is_connected():
-            redis_client.cache_llm_response(query, response_text)
-
-        return {"response": response_text, "cached": False}
+        # Try to parse as JSON if possible
+        try:
+            json_response = json.loads(response_text)
+            # Cache response if Redis is available
+            if use_cache and redis_client.is_connected():
+                redis_client.cache_llm_response(query, response_text)
+            return {"response": json_response, "cached": False, "format": "json"}
+        except json.JSONDecodeError:
+            # Not valid JSON, return as text
+            # Cache response if Redis is available
+            if use_cache and redis_client.is_connected():
+                redis_client.cache_llm_response(query, response_text)
+            return {"response": response_text, "cached": False, "format": "text"}
     except Exception as e:
         logger.error(f"Query failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
@@ -736,13 +786,20 @@ async def generate_schema(
     # Parse document first
     elements = await parse_document(file)
 
-    # Generate schema using LLM
-    prompt = f"Generate a JSON schema based on this description: '{schema_description}'. Use these document elements as reference: {json.dumps(elements)}"
-
     try:
-        response = llm.invoke(prompt)
-        schema = json.loads(str(response))
-        return {"schema": schema}
+        # Use the LLM integration module's generate_schema method
+        if hasattr(llm, 'generate_schema'):
+            schema = llm.generate_schema(schema_description, elements.get("elements", []))
+            return {"schema": schema}
+        else:
+            # Fall back to the old method
+            prompt = f"Generate a JSON schema based on this description: '{schema_description}'. Use these document elements as reference: {json.dumps(elements)}"
+            response = llm.invoke(prompt)
+            try:
+                schema = json.loads(str(response))
+                return {"schema": schema}
+            except json.JSONDecodeError:
+                return {"schema": str(response), "warning": "Response is not valid JSON"}
     except Exception as e:
         logger.error(f"Schema generation failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Schema generation failed: {str(e)}")
@@ -773,9 +830,44 @@ async def agent_task(
     prompt = f"Perform this task: '{task_description}'. Use these document elements: {json.dumps(elements)}"
 
     try:
+        # Check if the document contains images
+        has_images = False
+        for element in elements.get("elements", []):
+            if element.get("type") == "Image":
+                has_images = True
+                break
+
+        # Use image analysis if available and needed
+        if has_images and hasattr(llm, 'analyze_image'):
+            # Extract image paths
+            image_paths = []
+            for element in elements.get("elements", []):
+                if element.get("type") == "Image" and "path" in element:
+                    image_paths.append(element["path"])
+
+            # Analyze images
+            image_analyses = []
+            for path in image_paths:
+                try:
+                    analysis = llm.analyze_image(path)
+                    image_analyses.append({"path": path, "analysis": analysis})
+                except Exception as e:
+                    logger.error(f"Image analysis failed for {path}: {str(e)}")
+                    image_analyses.append({"path": path, "error": str(e)})
+
+            # Add image analyses to the prompt
+            prompt += f"\n\nImage analyses: {json.dumps(image_analyses)}"
+
+        # Invoke the LLM
         response = llm.invoke(prompt)
-        result = json.loads(str(response))
-        return result
+
+        # Try to parse as JSON
+        try:
+            result = json.loads(str(response))
+            return result
+        except json.JSONDecodeError:
+            # Return as text if not valid JSON
+            return {"result": str(response), "warning": "Response is not valid JSON"}
     except Exception as e:
         logger.error(f"Agent task failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Agent task failed: {str(e)}")
