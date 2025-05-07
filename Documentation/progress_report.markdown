@@ -168,11 +168,11 @@ As of May 7, 2023, we have completed the following steps from the getting starte
 
 Based on our progress, the immediate next steps are:
 
-### 1. Complete Cloud Storage Connectors
-- Implement Google Drive connector
-- Implement S3 connector
-- Implement Dropbox connector
-- Test all cloud storage connectors
+### 1. ✅ Complete Cloud Storage Connectors
+- ✅ Implement Google Drive connector
+- ✅ Implement S3 connector
+- ✅ Implement Dropbox connector
+- ✅ Test all cloud storage connectors
 
 ### 2. Finalize Phi-4-multimodal Integration
 - Complete the integration with Phi-4-multimodal
@@ -250,3 +250,4 @@ The project is on track to deliver a robust, self-hosted API for parsing documen
 | 2023-05-07 | Built and tested Docker images, fixed tests, tested with real documents                           |
 | 2023-05-07 | Created API user guide with sample API calls for all endpoints                                    |
 | 2023-05-07 | Updated progress report with current status and next steps                                        |
+| 2023-05-07 | Implemented cloud storage connectors for Google Drive, S3, and Dropbox                            |
