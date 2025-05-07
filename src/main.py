@@ -17,8 +17,11 @@ import sqlite3
 import requests
 from bs4 import BeautifulSoup
 import pathlib
-from table_parser import TableTransformer
-from redis_client import RedisClient
+from src.table_parser import TableTransformer
+from src.redis_client import RedisClient
+
+# Make sure json is imported at the top level
+import json
 
 # Optional imports based on environment variables
 USE_LLM = os.getenv("USE_LLM", "false").lower() == "true"
@@ -208,7 +211,9 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
         # Handle different source types
         if source_type == "file" and file:
             # Save uploaded file to temp location
-            tmp_path = tempfile.mktemp(suffix=f".{file.filename.split('.')[-1]}")
+            file_parts = file.filename.split('.')
+            extension = file_parts[-1] if len(file_parts) > 1 else "txt"
+            tmp_path = tempfile.mktemp(suffix=f".{extension}")
             with open(tmp_path, "wb") as f:
                 content = await file.read()
                 f.write(content)
@@ -275,6 +280,7 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
 
         elif source_type == "api" and source_url:
             # Use requests to fetch API data
+            import json  # Import json locally to ensure it's available
             response = requests.get(source_url)
             if response.status_code == 200:
                 try:
@@ -590,7 +596,8 @@ async def analyze_image(
 
     # Validate file type
     allowed_extensions = ["jpg", "jpeg", "png", "gif", "webp"]
-    file_extension = file.filename.split(".")[-1].lower()
+    file_parts = file.filename.split(".")
+    file_extension = file_parts[-1].lower() if len(file_parts) > 1 else ""
     if file_extension not in allowed_extensions:
         raise HTTPException(
             status_code=400,
@@ -909,7 +916,7 @@ async def agent_task(
 
 @app.post("/match")
 async def three_way_match(
-    files: List[UploadFile] = File(None),
+    files: List[UploadFile] = None,
     invoice_task_id: Optional[str] = None,
     po_task_id: Optional[str] = None,
     grn_task_id: Optional[str] = None,

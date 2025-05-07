@@ -32,8 +32,12 @@ def import_optional(module_path):
     if OPTIONAL_IMPORTS[module_path] is None:
         try:
             parts = module_path.split(".")
-            module_name = ".".join(parts[:-1])
-            class_name = parts[-1]
+            if len(parts) > 1:
+                module_name = ".".join(parts[:-1])
+                class_name = parts[-1]
+            else:
+                module_name = ""
+                class_name = parts[0] if parts else ""
             module = __import__(module_name, fromlist=[class_name])
             OPTIONAL_IMPORTS[module_path] = getattr(module, class_name)
         except (ImportError, AttributeError) as e:
@@ -441,7 +445,8 @@ class LLMIntegration:
                 image_base64 = base64.b64encode(image_data).decode("utf-8")
 
             # Determine image format
-            img_format = image_path.split(".")[-1].lower()
+            path_parts = image_path.split(".")
+            img_format = path_parts[-1].lower() if len(path_parts) > 1 else "jpeg"
             if img_format not in ["jpg", "jpeg", "png", "gif", "webp"]:
                 img_format = "jpeg"  # Default to JPEG
 

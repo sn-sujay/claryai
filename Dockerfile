@@ -5,9 +5,11 @@ RUN pip install --no-cache-dir fastapi uvicorn unstructured[all-docs] llama-inde
 RUN useradd -m appuser
 
 # Copy source files
-COPY src/main.py src/llm_integration.py src/table_parser.py src/redis_client.py src/cloud_connectors.py src/additional_connectors.py src/more_connectors.py ./
-# Compile with Cython for dependency hiding
-RUN cp main.py main_cy.pyx && cythonize -i main_cy.pyx
+COPY src/ ./src/
+COPY setup.py .
+
+# Compile with Cython for dependency hiding and performance optimization
+RUN python setup.py build_ext --inplace
 
 # Install Ollama and set up Phi-4-multimodal
 COPY Modelfile .
@@ -26,6 +28,10 @@ RUN ollama serve & sleep 5 && ollama create phi-4-multimodal -f Modelfile
 ENV USE_LLM=true
 ENV LLM_MODEL=phi-4-multimodal
 
+# Create a wrapper script to use the compiled module
+RUN echo '#!/bin/bash\nuvicorn src.main:app --host 0.0.0.0 --port 8000' > /app/start.sh && \
+    chmod +x /app/start.sh
+
 USER appuser
 EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/app/start.sh"]
