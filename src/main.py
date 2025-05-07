@@ -124,6 +124,52 @@ except ImportError:
     app_celery = None
     logger.warning("Celery not available. Async processing will be limited.")
 
+# Helper function to parse a file
+def parse_file(file_obj):
+    """
+    Parse a file using Unstructured.io.
+
+    Args:
+        file_obj: File object to parse
+
+    Returns:
+        list: List of parsed elements
+    """
+    try:
+        from unstructured.partition.auto import partition
+
+        # Create a temporary file
+        tmp_path = tempfile.mktemp()
+        with open(tmp_path, "wb") as f:
+            f.write(file_obj.read())
+
+        # Parse the file
+        elements_raw = partition(tmp_path)
+        elements = []
+
+        for el in elements_raw:
+            el_type = str(type(el).__name__)
+            el_text = str(el)
+
+            # Check if this element might be a table
+            if el_type == "Table" or (el_type == "Text" and ('|' in el_text or '+---+' in el_text)):
+                # Try to parse as a table
+                table_data = table_transformer.parse_text_table(el_text)
+                elements.append(table_data)
+            else:
+                elements.append({"type": el_type, "text": el_text})
+
+        # Clean up
+        os.unlink(tmp_path)
+
+        return elements
+    except ImportError:
+        logger.error("Unstructured.io not available")
+        return [{"type": "Error", "text": "Unstructured.io not available"}]
+    except Exception as e:
+        logger.error(f"File parsing failed: {str(e)}")
+        return [{"type": "Error", "text": f"File parsing failed: {str(e)}"}]
+
 # Initialize LLM if enabled
 if USE_LLM:
     try:
@@ -274,7 +320,7 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
                 # Example: s3://{"aws_access_key_id":"key","aws_secret_access_key":"secret"}/bucket/key
                 # Example: dropbox://{"access_token":"xyz"}/path/to/file
 
-                from src.cloud_connectors import get_connector
+                from src.cloud_connectors import get_connector as get_cloud_connector
                 import json
 
                 # Parse the URL
@@ -310,7 +356,7 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
                     credentials = json.loads(credentials_json)
 
                     # Get the appropriate connector
-                    connector = get_connector(provider)
+                    connector = get_cloud_connector(provider)
                     if not connector:
                         raise ValueError(f"Unsupported cloud storage provider: {provider}")
 
@@ -333,6 +379,74 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
             except Exception as e:
                 logger.error(f"Cloud source processing failed: {str(e)}")
                 elements = [{"type": "Error", "text": f"Cloud source processing failed: {str(e)}"}]
+
+        elif source_type == "datasource" and source_url:
+            try:
+                # Parse the source URL (format: provider://credentials_json/source_id)
+                # Example: notion://{"token":"xyz"}/page_id
+                # Example: github://{"token":"xyz"}/owner/repo/path/to/file
+                # Example: mongodb://{"connection_string":"mongodb://..."}/database.collection
+                # Example: slack://{"token":"xyz"}/channel_id
+
+                from src.additional_connectors import get_connector as get_datasource_connector
+                import json
+
+                # Parse the URL
+                parts = source_url.split("://", 1)
+                if len(parts) != 2:
+                    raise ValueError(f"Invalid data source URL format: {source_url}")
+
+                provider = parts[0]
+                remaining = parts[1]
+
+                # Extract credentials and source_id
+                try:
+                    # Find the first occurrence of / after the JSON
+                    json_end = 0
+                    brace_count = 0
+                    for i, char in enumerate(remaining):
+                        if char == '{':
+                            brace_count += 1
+                        elif char == '}':
+                            brace_count -= 1
+                            if brace_count == 0:
+                                json_end = i + 1
+                                break
+
+                    if json_end == 0:
+                        raise ValueError("Could not parse JSON credentials in URL")
+
+                    # Extract credentials and source_id
+                    credentials_json = remaining[:json_end]
+                    source_id = remaining[json_end:].lstrip('/')
+
+                    # Parse credentials
+                    credentials = json.loads(credentials_json)
+
+                    # Get the appropriate connector
+                    connector = get_datasource_connector(provider)
+                    if not connector:
+                        raise ValueError(f"Unsupported data source provider: {provider}")
+
+                    # Download the data
+                    tmp_path = connector.download_data(source_id, credentials)
+                    if not tmp_path:
+                        raise ValueError(f"Failed to download data from {provider}")
+
+                    # Parse the downloaded file
+                    with open(tmp_path, 'rb') as f:
+                        elements = parse_file(f)
+
+                    # Clean up
+                    os.unlink(tmp_path)
+
+                except json.JSONDecodeError:
+                    raise ValueError(f"Invalid JSON credentials in URL: {source_url}")
+                except Exception as e:
+                    raise ValueError(f"Error processing data source: {str(e)}")
+            except Exception as e:
+                logger.error(f"Data source processing failed: {str(e)}")
+                elements = [{"type": "Error", "text": f"Data source processing failed: {str(e)}"}]
 
         else:
             elements = [{"type": "Error", "text": "Invalid source type or missing required parameters"}]

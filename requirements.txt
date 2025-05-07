@@ -23,3 +23,12 @@ google-auth-oauthlib>=1.2.0
 google-api-python-client>=2.169.0
 boto3>=1.38.0
 dropbox>=12.0.0
+
+# Additional data source connectors
+pymongo>=4.6.0
+psycopg2-binary>=2.9.9
+elasticsearch>=8.11.0
+slack-sdk>=3.26.0
+PyGithub>=2.1.1
+python-gitlab>=4.4.0
+msal>=1.26.0

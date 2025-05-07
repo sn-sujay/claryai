@@ -100,14 +100,38 @@ curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614
 curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&source_type=cloud&source_url=dropbox://{\"access_token\":\"your_access_token\"}/path/to/file"
 ```
 
-**Example 6: Parse a file with a specific chunking strategy**
+**Example 6: Parse data from Notion**
+
+```bash
+curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&source_type=datasource&source_url=notion://{\"token\":\"your_notion_token\"}/page_id"
+```
+
+**Example 7: Parse data from GitHub**
+
+```bash
+curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&source_type=datasource&source_url=github://{\"token\":\"your_github_token\"}/owner/repo/path/to/file"
+```
+
+**Example 8: Parse data from MongoDB**
+
+```bash
+curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&source_type=datasource&source_url=mongodb://{\"connection_string\":\"mongodb://username:password@host:port\"}/database.collection"
+```
+
+**Example 9: Parse data from Slack**
+
+```bash
+curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&source_type=datasource&source_url=slack://{\"token\":\"your_slack_token\"}/channel_id"
+```
+
+**Example 10: Parse a file with a specific chunking strategy**
 
 ```bash
 curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&chunk_strategy=sentence" \
   -F "file=@large_document.txt"
 ```
 
-**Example 7: Parse a file asynchronously**
+**Example 11: Parse a file asynchronously**
 
 ```bash
 curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&async=true" \
