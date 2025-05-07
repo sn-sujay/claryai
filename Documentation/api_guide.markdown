@@ -82,14 +82,32 @@ curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614
 curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&source_type=web&source_url=https://example.com"
 ```
 
-**Example 3: Parse a file with a specific chunking strategy**
+**Example 3: Parse a file from Google Drive**
+
+```bash
+curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&source_type=cloud&source_url=google_drive://{\"access_token\":\"your_access_token\"}/file_id"
+```
+
+**Example 4: Parse a file from Amazon S3**
+
+```bash
+curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&source_type=cloud&source_url=s3://{\"aws_access_key_id\":\"your_key\",\"aws_secret_access_key\":\"your_secret\"}/bucket/key"
+```
+
+**Example 5: Parse a file from Dropbox**
+
+```bash
+curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&source_type=cloud&source_url=dropbox://{\"access_token\":\"your_access_token\"}/path/to/file"
+```
+
+**Example 6: Parse a file with a specific chunking strategy**
 
 ```bash
 curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&chunk_strategy=sentence" \
   -F "file=@large_document.txt"
 ```
 
-**Example 4: Parse a file asynchronously**
+**Example 7: Parse a file asynchronously**
 
 ```bash
 curl -X POST "http://localhost:8080/parse?api_key=123e4567-e89b-12d3-a456-426614174000&async=true" \

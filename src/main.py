@@ -268,8 +268,71 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
                 elements = [{"type": "Error", "text": f"Web request failed with status {response.status_code}"}]
 
         elif source_type == "cloud" and source_url:
-            # Placeholder for cloud storage connectors
-            elements = [{"type": "Error", "text": "Cloud storage connectors not implemented yet"}]
+            try:
+                # Parse the source URL (format: provider://credentials_json/file_id)
+                # Example: google_drive://{"access_token":"xyz"}/file_id
+                # Example: s3://{"aws_access_key_id":"key","aws_secret_access_key":"secret"}/bucket/key
+                # Example: dropbox://{"access_token":"xyz"}/path/to/file
+
+                from src.cloud_connectors import get_connector
+                import json
+
+                # Parse the URL
+                parts = source_url.split("://", 1)
+                if len(parts) != 2:
+                    raise ValueError(f"Invalid cloud source URL format: {source_url}")
+
+                provider = parts[0]
+                remaining = parts[1]
+
+                # Extract credentials and file_id
+                try:
+                    # Find the first occurrence of / after the JSON
+                    json_end = 0
+                    brace_count = 0
+                    for i, char in enumerate(remaining):
+                        if char == '{':
+                            brace_count += 1
+                        elif char == '}':
+                            brace_count -= 1
+                            if brace_count == 0:
+                                json_end = i + 1
+                                break
+
+                    if json_end == 0:
+                        raise ValueError("Could not parse JSON credentials in URL")
+
+                    # Extract credentials and file_id
+                    credentials_json = remaining[:json_end]
+                    file_id = remaining[json_end:].lstrip('/')
+
+                    # Parse credentials
+                    credentials = json.loads(credentials_json)
+
+                    # Get the appropriate connector
+                    connector = get_connector(provider)
+                    if not connector:
+                        raise ValueError(f"Unsupported cloud storage provider: {provider}")
+
+                    # Download the file
+                    tmp_path = connector.download_file(file_id, credentials)
+                    if not tmp_path:
+                        raise ValueError(f"Failed to download file from {provider}")
+
+                    # Parse the downloaded file
+                    with open(tmp_path, 'rb') as f:
+                        elements = parse_file(f)
+
+                    # Clean up
+                    os.unlink(tmp_path)
+
+                except json.JSONDecodeError:
+                    raise ValueError(f"Invalid JSON credentials in URL: {source_url}")
+                except Exception as e:
+                    raise ValueError(f"Error processing cloud source: {str(e)}")
+            except Exception as e:
+                logger.error(f"Cloud source processing failed: {str(e)}")
+                elements = [{"type": "Error", "text": f"Cloud source processing failed: {str(e)}"}]
 
         else:
             elements = [{"type": "Error", "text": "Invalid source type or missing required parameters"}]
