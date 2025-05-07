@@ -252,3 +252,4 @@ The project is on track to deliver a robust, self-hosted API for parsing documen
 | 2023-05-07 | Updated progress report with current status and next steps                                        |
 | 2023-05-07 | Implemented cloud storage connectors for Google Drive, S3, and Dropbox                            |
 | 2023-05-07 | Implemented additional data source connectors for Notion, GitHub, MongoDB, and Slack              |
+| 2023-05-07 | Implemented more data source connectors from Unstructured.io and LlamaIndex                       |
