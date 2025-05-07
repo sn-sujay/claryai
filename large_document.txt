@@ -1,0 +1,155 @@
+# Large Document for Testing Chunking Strategies
+
+## Section 1: Introduction
+
+This is a large document created for testing chunking strategies in the ClaryAI document parsing API. The document contains multiple sections with different types of content, including paragraphs, lists, tables, and code blocks.
+
+### Subsection 1.1: Purpose
+
+The purpose of this document is to test how the API handles large documents and how different chunking strategies affect the parsing results. We'll test three chunking strategies:
+
+1. Sentence-based chunking
+2. Paragraph-based chunking
+3. Fixed-size chunking
+
+### Subsection 1.2: Expected Results
+
+We expect that:
+- Sentence-based chunking will create smaller, more granular chunks
+- Paragraph-based chunking will preserve the context of paragraphs
+- Fixed-size chunking will create chunks of approximately equal size
+
+## Section 2: Sample Content
+
+### Subsection 2.1: Paragraphs
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget ultricies nisl nisl eget nisl. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget ultricies nisl nisl eget nisl.
+
+Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+
+Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+
+### Subsection 2.2: Lists
+
+Here's a list of items:
+
+- Item 1: First item in the list
+- Item 2: Second item in the list
+- Item 3: Third item in the list
+- Item 4: Fourth item in the list
+- Item 5: Fifth item in the list
+
+Here's a numbered list:
+
+1. First step in the process
+2. Second step in the process
+3. Third step in the process
+4. Fourth step in the process
+5. Fifth step in the process
+
+### Subsection 2.3: Tables
+
+Here's a sample table:
+
+| ID | Name    | Department | Salary  |
+|----|---------|------------|---------|
+| 1  | John    | IT         | $75,000 |
+| 2  | Jane    | HR         | $65,000 |
+| 3  | Bob     | Finance    | $80,000 |
+| 4  | Alice   | Marketing  | $70,000 |
+| 5  | Charlie | Sales      | $85,000 |
+
+### Subsection 2.4: Code Blocks
+
+Here's a sample Python code block:
+
+```python
+def calculate_total(items):
+    total = 0
+    for item in items:
+        total += item['price'] * item['quantity']
+    return total
+
+items = [
+    {'name': 'Widget A', 'price': 10, 'quantity': 5},
+    {'name': 'Widget B', 'price': 15, 'quantity': 3},
+    {'name': 'Premium Support', 'price': 100, 'quantity': 1}
+]
+
+total = calculate_total(items)
+print(f"Total: ${total}")
+```
+
+## Section 3: Technical Details
+
+### Subsection 3.1: API Endpoints
+
+The ClaryAI API provides several endpoints for document parsing and analysis:
+
+- `/parse`: Parse documents from various sources
+- `/query`: Query parsed documents using LLM
+- `/generate_schema`: Generate custom JSON schemas
+- `/agent`: Perform agentic tasks on documents
+- `/match`: Three-way matching for invoices, POs, and GRNs
+- `/status/{task_id}`: Check status of asynchronous tasks
+
+### Subsection 3.2: Chunking Strategies
+
+The API supports three chunking strategies:
+
+1. **Sentence-based chunking**: Splits the document into chunks based on sentence boundaries. This is useful for fine-grained analysis but may lose context across sentences.
+
+2. **Paragraph-based chunking**: Splits the document into chunks based on paragraph boundaries. This preserves the context within paragraphs but may create chunks of varying sizes.
+
+3. **Fixed-size chunking**: Splits the document into chunks of approximately equal size, regardless of content boundaries. This ensures consistent chunk sizes but may split sentences or paragraphs.
+
+## Section 4: Implementation Details
+
+### Subsection 4.1: Document Parsing
+
+The document parsing process involves several steps:
+
+1. **File Upload**: The client uploads a file or provides a URL to a file.
+2. **Preprocessing**: The API preprocesses the file to extract text and structure.
+3. **Parsing**: The API parses the text into structured elements (e.g., titles, paragraphs, tables).
+4. **Chunking**: The API applies the specified chunking strategy to the parsed elements.
+5. **Indexing**: The API indexes the chunks for retrieval and querying.
+6. **Response**: The API returns the parsed elements and status.
+
+### Subsection 4.2: Three-Way Matching
+
+The three-way matching process involves comparing three documents:
+
+1. **Invoice**: Contains details of the goods or services provided and the amount due.
+2. **Purchase Order (PO)**: Contains details of the goods or services ordered and the agreed price.
+3. **Goods Receipt Note (GRN)**: Contains details of the goods received and their condition.
+
+The API compares these documents to identify discrepancies in:
+
+- PO number
+- Vendor/supplier
+- Bill to/buyer
+- Total amount
+- Line items (quantity, price, total)
+
+## Section 5: Conclusion
+
+This document provides a comprehensive test case for the ClaryAI document parsing API. By testing different chunking strategies on this document, we can evaluate the API's performance and determine the optimal strategy for different use cases.
+
+### Subsection 5.1: Next Steps
+
+After testing the chunking strategies, we should:
+
+1. Analyze the parsing results for each strategy
+2. Compare the performance in terms of accuracy and speed
+3. Determine the optimal strategy for different document types
+4. Implement the findings in the production environment
+
+### Subsection 5.2: References
+
+For more information, refer to the following resources:
+
+- ClaryAI Documentation: [link]
+- FastAPI Documentation: [link]
+- Unstructured.io Documentation: [link]
+- LlamaIndex Documentation: [link]
