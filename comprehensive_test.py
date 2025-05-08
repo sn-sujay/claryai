@@ -33,8 +33,8 @@ logging.basicConfig(
 logger = logging.getLogger("claryai.test")
 
 # Default configuration
-DEFAULT_API_URL = "http://localhost:8080"
-BATCH_API_URL = "http://localhost:8082"
+DEFAULT_API_URL = "http://localhost:8080"  # Main API server
+BATCH_API_URL = "http://localhost:8082"  # Batch test server
 DEFAULT_API_KEY = "123e4567-e89b-12d3-a456-426614174000"
 
 # Test file directory
