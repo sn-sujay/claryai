@@ -29,7 +29,7 @@ except ImportError as e:
     IMPORTS_SUCCESSFUL = False
 
 # Model configuration
-DEFAULT_MODEL = "microsoft/phi-2"  # Using Phi-2 as a fallback since Phi-4-multimodal requires authentication
+DEFAULT_MODEL = "microsoft/Phi-4-multimodal"  # Using Phi-4-multimodal as the default model
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu" if IMPORTS_SUCCESSFUL else None
 MAX_LENGTH = 4096
 MAX_NEW_TOKENS = 1024
@@ -98,7 +98,7 @@ class PhiModelIntegration:
         Initialize the Phi Model Integration.
 
         Args:
-            model_name: Name of the model to use (default: microsoft/phi-2)
+            model_name: Name of the model to use (default: microsoft/Phi-4-multimodal)
         """
         if not IMPORTS_SUCCESSFUL:
             raise ImportError("Required libraries for Phi models are not installed")
