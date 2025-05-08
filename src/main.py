@@ -44,7 +44,7 @@ import json
 
 # Optional imports based on environment variables
 USE_LLM = os.getenv("USE_LLM", "false").lower() == "true"
-LLM_MODEL = os.getenv("LLM_MODEL")
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o")  # Default to OpenAI GPT-4o
 LLM_ENDPOINT = os.getenv("LLM_ENDPOINT")
 
 # Import lifespan handler
@@ -219,18 +219,39 @@ def parse_file(file_obj):
 # Initialize LLM if enabled
 if USE_LLM:
     try:
-        # Use the LLM integration module
+        # Try to use OpenAI integration first
         try:
-            from llm_integration import get_llm_integration, PROMPT_TEMPLATES
+            from openai_integration import get_openai_integration, PROMPT_TEMPLATES
+            llm_integration = get_openai_integration(LLM_MODEL)
+            if llm_integration:
+                llm = llm_integration
+                logger.info(f"OpenAI LLM initialized successfully with model: {LLM_MODEL}")
+            else:
+                # Fall back to the original LLM integration
+                try:
+                    from llm_integration import get_llm_integration, PROMPT_TEMPLATES
+                except ImportError:
+                    from src.llm_integration import get_llm_integration, PROMPT_TEMPLATES
+                llm_integration = get_llm_integration()
+                if llm_integration:
+                    llm = llm_integration
+                    logger.info(f"LLM initialized successfully with model: {llm_integration.model}")
+                else:
+                    USE_LLM = False
+                    logger.warning("LLM integration not available. LLM features disabled.")
         except ImportError:
-            from src.llm_integration import get_llm_integration, PROMPT_TEMPLATES
-        llm_integration = get_llm_integration()
-        if llm_integration:
-            llm = llm_integration
-            logger.info(f"LLM initialized successfully with model: {llm_integration.model}")
-        else:
-            USE_LLM = False
-            logger.warning("LLM integration not available. LLM features disabled.")
+            # Fall back to the original LLM integration
+            try:
+                from llm_integration import get_llm_integration, PROMPT_TEMPLATES
+            except ImportError:
+                from src.llm_integration import get_llm_integration, PROMPT_TEMPLATES
+            llm_integration = get_llm_integration()
+            if llm_integration:
+                llm = llm_integration
+                logger.info(f"LLM initialized successfully with model: {llm_integration.model}")
+            else:
+                USE_LLM = False
+                logger.warning("LLM integration not available. LLM features disabled.")
     except ImportError as e:
         USE_LLM = False
         logger.warning(f"LLM dependencies not available. LLM features disabled. Error: {str(e)}")
@@ -761,7 +782,7 @@ async def root():
         ],
         "llm_enabled": USE_LLM,
         "llm_model": LLM_MODEL if USE_LLM else None,
-        "multimodal_enabled": USE_LLM and LLM_MODEL == "phi-4-multimodal"
+        "multimodal_enabled": USE_LLM and ("gpt-4" in LLM_MODEL.lower() and ("vision" in LLM_MODEL.lower() or "o" in LLM_MODEL.lower()) if LLM_MODEL else False)
     }
 
 @app.post("/analyze_image")
@@ -787,8 +808,13 @@ async def analyze_image(
     if not USE_LLM:
         raise HTTPException(status_code=400, detail="LLM integration is disabled")
 
-    if LLM_MODEL != "phi-4-multimodal":
-        raise HTTPException(status_code=400, detail="Image analysis requires phi-4-multimodal model")
+    # Check if the model is multimodal
+    is_multimodal = False
+    if "gpt-4" in LLM_MODEL.lower() and ("vision" in LLM_MODEL.lower() or "o" in LLM_MODEL.lower()):
+        is_multimodal = True
+
+    if not is_multimodal:
+        raise HTTPException(status_code=400, detail="Image analysis requires a multimodal model like GPT-4o or GPT-4 Vision")
 
     # Validate file type
     allowed_extensions = ["jpg", "jpeg", "png", "gif", "webp"]
