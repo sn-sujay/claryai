@@ -17,8 +17,27 @@ import sqlite3
 import requests
 from bs4 import BeautifulSoup
 import pathlib
-from table_parser import TableTransformer
-from redis_client import RedisClient
+try:
+    # Try to import the improved table parser first
+    try:
+        from table_parser_improved import TableTransformer
+    except ImportError:
+        from src.table_parser_improved import TableTransformer
+
+    # Import Redis client
+    try:
+        from redis_client import RedisClient
+    except ImportError:
+        from src.redis_client import RedisClient
+except ImportError:
+    # Fall back to the original table parser
+    try:
+        from table_parser import TableTransformer
+        from redis_client import RedisClient
+    except ImportError:
+        # Try with src prefix
+        from src.table_parser import TableTransformer
+        from src.redis_client import RedisClient
 
 # Make sure json is imported at the top level
 import json
@@ -172,9 +191,14 @@ def parse_file(file_obj):
                                       '+---+' in el_text or
                                       '----' in el_text or
                                       '=====' in el_text or
+                                      '---------' in el_text or
+                                      '$' in el_text and 'Total' in el_text or
                                       (el_text.count('\n') >= 2 and
                                        any(line.strip().startswith('-') and line.strip().endswith('-')
-                                           for line in el_text.split('\n'))))):
+                                           for line in el_text.split('\n'))) or
+                                      # Check for tabular data with multiple spaces as column separators
+                                      (el_text.count('\n') >= 2 and
+                                       any('  ' in line for line in el_text.split('\n'))))):
                 # Try to parse as a table
                 table_data = table_transformer.parse_text_table(el_text)
                 elements.append(table_data)
@@ -196,7 +220,10 @@ def parse_file(file_obj):
 if USE_LLM:
     try:
         # Use the LLM integration module
-        from llm_integration import get_llm_integration, PROMPT_TEMPLATES
+        try:
+            from llm_integration import get_llm_integration, PROMPT_TEMPLATES
+        except ImportError:
+            from src.llm_integration import get_llm_integration, PROMPT_TEMPLATES
         llm_integration = get_llm_integration()
         if llm_integration:
             llm = llm_integration
@@ -240,21 +267,76 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
             # Check if it's a JSON file
             if extension.lower() == 'json':
                 try:
-                    with open(tmp_path, 'r') as f:
-                        json_data = json.load(f)
+                    # Read the file content
+                    with open(tmp_path, 'r', encoding='utf-8') as f:
+                        file_content = f.read()
 
-                    # Convert JSON to elements
-                    if isinstance(json_data, dict):
-                        elements = [{"type": "JSONObject", "text": json.dumps(json_data, indent=2)}]
-                    elif isinstance(json_data, list):
-                        elements = [{"type": "JSONArray", "text": json.dumps(json_data, indent=2)}]
-                    else:
-                        elements = [{"type": "JSONValue", "text": json.dumps(json_data)}]
+                    # Try to parse as JSON
+                    try:
+                        json_data = json.loads(file_content)
 
-                    logger.info(f"Parsed JSON file: {file.filename}")
-                except json.JSONDecodeError as e:
-                    logger.error(f"Invalid JSON file: {str(e)}")
-                    elements = [{"type": "Error", "text": f"Invalid JSON file: {str(e)}"}]
+                        # Convert JSON to elements
+                        if isinstance(json_data, dict):
+                            # Process dictionary
+                            elements = []
+                            for key, value in json_data.items():
+                                if isinstance(value, (dict, list)):
+                                    elements.append({
+                                        "type": "JSONProperty",
+                                        "key": key,
+                                        "value": json.dumps(value, indent=2)
+                                    })
+                                else:
+                                    elements.append({
+                                        "type": "JSONProperty",
+                                        "key": key,
+                                        "value": str(value)
+                                    })
+                            # Also add the full JSON
+                            elements.append({
+                                "type": "JSONObject",
+                                "text": json.dumps(json_data, indent=2)
+                            })
+                        elif isinstance(json_data, list):
+                            # Process list
+                            elements = []
+                            for i, item in enumerate(json_data[:10]):  # Limit to first 10 items
+                                if isinstance(item, dict):
+                                    elements.append({
+                                        "type": "JSONItem",
+                                        "index": i,
+                                        "value": json.dumps(item, indent=2)
+                                    })
+                                else:
+                                    elements.append({
+                                        "type": "JSONItem",
+                                        "index": i,
+                                        "value": str(item)
+                                    })
+                            # Also add the full JSON (limited to 100 items)
+                            elements.append({
+                                "type": "JSONArray",
+                                "text": json.dumps(json_data[:100] if len(json_data) > 100 else json_data, indent=2),
+                                "total_items": len(json_data)
+                            })
+                        else:
+                            # Simple value
+                            elements = [{
+                                "type": "JSONValue",
+                                "text": json.dumps(json_data)
+                            }]
+
+                        logger.info(f"Successfully parsed JSON file: {file.filename}")
+                    except json.JSONDecodeError as e:
+                        # If JSON parsing fails, treat as text
+                        logger.warning(f"Invalid JSON file, treating as text: {str(e)}")
+                        elements = [{
+                            "type": "Text",
+                            "text": file_content[:10000]  # Limit to first 10000 characters
+                        }]
+                except Exception as e:
+                    logger.error(f"Error processing JSON file: {str(e)}")
+                    elements = [{"type": "Error", "text": f"Error processing JSON file: {str(e)}"}]
             else:
                 # Use Unstructured.io to parse the file
                 try:
@@ -272,9 +354,14 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
                                                   '+---+' in el_text or
                                                   '----' in el_text or
                                                   '=====' in el_text or
+                                                  '---------' in el_text or
+                                                  '$' in el_text and 'Total' in el_text or
                                                   (el_text.count('\n') >= 2 and
                                                    any(line.strip().startswith('-') and line.strip().endswith('-')
-                                                       for line in el_text.split('\n'))))):
+                                                       for line in el_text.split('\n'))) or
+                                                  # Check for tabular data with multiple spaces as column separators
+                                                  (el_text.count('\n') >= 2 and
+                                                   any('  ' in line for line in el_text.split('\n'))))):
                             # Try to parse as a table
                             table_data = table_transformer.parse_text_table(el_text)
                             elements.append(table_data)
@@ -367,7 +454,10 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
                 # Example: s3://{"aws_access_key_id":"key","aws_secret_access_key":"secret"}/bucket/key
                 # Example: dropbox://{"access_token":"xyz"}/path/to/file
 
-                from cloud_connectors import get_connector as get_cloud_connector
+                try:
+                    from cloud_connectors import get_connector as get_cloud_connector
+                except ImportError:
+                    from src.cloud_connectors import get_connector as get_cloud_connector
                 import json
 
                 # Parse the URL
@@ -473,7 +563,10 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
 
                     # Try to get the connector from additional_connectors
                     try:
-                        from src.additional_connectors import get_connector as get_datasource_connector
+                        try:
+                            from additional_connectors import get_connector as get_datasource_connector
+                        except ImportError:
+                            from src.additional_connectors import get_connector as get_datasource_connector
                         connector = get_datasource_connector(provider)
                     except (ImportError, AttributeError):
                         connector = None
@@ -481,7 +574,10 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
                     # If not found, try to get from more_connectors
                     if not connector:
                         try:
-                            from src.more_connectors import get_connector as get_more_connector
+                            try:
+                                from more_connectors import get_connector as get_more_connector
+                            except ImportError:
+                                from src.more_connectors import get_connector as get_more_connector
                             connector = get_more_connector(provider)
                         except (ImportError, AttributeError):
                             connector = None
@@ -661,7 +757,7 @@ async def root():
         "version": "0.1.0",
         "endpoints": [
             "/parse", "/query", "/generate_schema", "/agent", "/match", "/status/{task_id}",
-            "/analyze_image", "/batch", "/usage_report"
+            "/analyze_image", "/batch", "/status/batch/{batch_id}", "/usage_report"
         ],
         "llm_enabled": USE_LLM,
         "llm_model": LLM_MODEL if USE_LLM else None,
