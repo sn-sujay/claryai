@@ -1,0 +1,14 @@
+{
+  "llm_availability": {
+    "check": {
+      "llm_enabled": false,
+      "multimodal_enabled": false,
+      "error": "LLM integration is disabled",
+      "success": false
+    }
+  },
+  "document_querying": {},
+  "schema_generation": {},
+  "agentic_tasks": {},
+  "image_analysis": {}
+}

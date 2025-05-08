@@ -1,0 +1,237 @@
+{
+  "document_parsing": {
+    "invoice": {
+      "doc_type": "invoice",
+      "file_path": "test_files/sample_invoice.txt",
+      "status_code": 200,
+      "task_id": null,
+      "task_status": {
+        "status": "unknown",
+        "error": "Max retries reached"
+      },
+      "success": true
+    },
+    "po": {
+      "doc_type": "po",
+      "file_path": "test_files/sample_po.txt",
+      "status_code": 200,
+      "task_id": null,
+      "task_status": {
+        "status": "unknown",
+        "error": "Max retries reached"
+      },
+      "success": true
+    },
+    "grn": {
+      "doc_type": "grn",
+      "file_path": "test_files/sample_grn.txt",
+      "status_code": 200,
+      "task_id": null,
+      "task_status": {
+        "status": "unknown",
+        "error": "Max retries reached"
+      },
+      "success": true
+    }
+  },
+  "three_way_matching": {
+    "matching": {
+      "file_paths": [
+        "test_files/sample_invoice.txt",
+        "test_files/sample_po.txt",
+        "test_files/sample_grn.txt"
+      ],
+      "status_code": 200,
+      "result": {
+        "status": "complete_match",
+        "match_percentage": 100.0,
+        "header_matches": [
+          {
+            "field": "PO Number",
+            "status": "match"
+          },
+          {
+            "field": "Vendor/Supplier",
+            "status": "match"
+          },
+          {
+            "field": "Bill To/Buyer",
+            "status": "match"
+          },
+          {
+            "field": "Total Amount",
+            "status": "match"
+          }
+        ],
+        "header_discrepancies": [],
+        "item_matches": [],
+        "item_discrepancies": [],
+        "grn_matches": [],
+        "grn_discrepancies": [],
+        "documents": {
+          "invoice": {
+            "type": "invoice",
+            "invoice_number": "INV-2023-001",
+            "po_number": "PO",
+            "vendor": "Acme Corporation",
+            "bill_to": "XYZ Company",
+            "total": "$900.00 Tax (10%)",
+            "items": []
+          },
+          "po": {
+            "type": "po",
+            "po_number": "PO",
+            "buyer": "XYZ Company",
+            "supplier": "Acme Corporation",
+            "total": "$900.00 Tax (10%)",
+            "items": []
+          },
+          "grn": {
+            "type": "grn",
+            "grn_number": "GRN",
+            "po_number": "PO-2023-001 Delivery Date",
+            "receiver": "XYZ Company",
+            "supplier": "Acme Corporation",
+            "items": []
+          }
+        }
+      },
+      "success": true
+    },
+    "mismatch": {
+      "file_paths": [
+        "sample_invoice_mismatch.txt",
+        "test_files/sample_po.txt",
+        "test_files/sample_grn.txt"
+      ],
+      "status_code": 200,
+      "result": {
+        "status": "partial_match",
+        "match_percentage": 37.5,
+        "header_matches": [
+          {
+            "field": "PO Number",
+            "status": "match"
+          },
+          {
+            "field": "Vendor/Supplier",
+            "status": "match"
+          },
+          {
+            "field": "Bill To/Buyer",
+            "status": "match"
+          }
+        ],
+        "header_discrepancies": [
+          {
+            "field": "Total Amount",
+            "status": "mismatch",
+            "invoice_value": "$253.00",
+            "po_value": "$900.00 Tax (10%)"
+          }
+        ],
+        "item_matches": [],
+        "item_discrepancies": [
+          {
+            "item": "Widget A",
+            "status": "not_in_po"
+          },
+          {
+            "item": "Widget B",
+            "status": "not_in_po"
+          },
+          {
+            "item": "Premium Support",
+            "status": "not_in_po"
+          },
+          {
+            "item": "Extra Service",
+            "status": "not_in_po"
+          }
+        ],
+        "grn_matches": [],
+        "grn_discrepancies": [],
+        "documents": {
+          "invoice": {
+            "type": "invoice",
+            "invoice_number": "INV-2023-001",
+            "po_number": "PO",
+            "vendor": "Acme Corporation",
+            "bill_to": "XYZ Company",
+            "total": "$253.00",
+            "items": [
+              {
+                "item": "Widget A",
+                "quantity": "5",
+                "price": "$10.00",
+                "total": "$50.00"
+              },
+              {
+                "item": "Widget B",
+                "quantity": "2",
+                "price": "$15.00",
+                "total": "$30.00"
+              },
+              {
+                "item": "Premium Support",
+                "quantity": "1",
+                "price": "$100.00",
+                "total": "$100.00"
+              },
+              {
+                "item": "Extra Service",
+                "quantity": "1",
+                "price": "$50.00",
+                "total": "$50.00"
+              }
+            ]
+          },
+          "po": {
+            "type": "po",
+            "po_number": "PO",
+            "buyer": "XYZ Company",
+            "supplier": "Acme Corporation",
+            "total": "$900.00 Tax (10%)",
+            "items": []
+          },
+          "grn": {
+            "type": "grn",
+            "grn_number": "GRN",
+            "po_number": "PO-2023-001 Delivery Date",
+            "receiver": "XYZ Company",
+            "supplier": "Acme Corporation",
+            "items": []
+          }
+        }
+      },
+      "mismatch_detected": true,
+      "success": true
+    }
+  },
+  "table_parsing": {
+    "invoice": {
+      "doc_type": "invoice",
+      "file_path": "test_files/sample_invoice.txt",
+      "status_code": 200,
+      "task_id": null,
+      "error": "No tables found",
+      "success": false
+    },
+    "po": {
+      "doc_type": "po",
+      "file_path": "test_files/sample_po.txt",
+      "status_code": 200,
+      "task_id": null,
+      "error": "No tables found",
+      "success": false
+    },
+    "grn": {
+      "doc_type": "grn",
+      "file_path": "test_files/sample_grn.txt",
+      "status_code": 200,
+      "task_id": null,
+      "error": "No tables found",
+      "success": false
+    }
+  }
+}

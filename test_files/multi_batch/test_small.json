@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "id": 0,
+      "name": "item_0",
+      "value": 8.209453536708612,
+      "description": "PVWNZIIMLRLTATVBCSEC",
+      "attributes": {
+        "color": "red",
+        "size": "medium",
+        "weight": 0.4647499477166961
+      }
+    },
+    {
+      "id": 1,
+      "name": "item_1",
+      "value": 41.26606804619675,
+      "description": "REPAYEXBKZPGJNNXEXPG",
+      "attributes": {
+        "color": "yellow",
+        "size": "large",
+        "weight": 1.4962540059617857
+      }
+    },
+    {
+      "id": 2,
+      "name": "item_2",
+      "value": 38.54605663684638,
+      "description": "UQEMYUTYTBMIESOMLQTW",
+      "attributes": {
+        "color": "red",
+        "size": "large",
+        "weight": 9.16926271646387
+      }
+    },
+    {
+      "id": 3,
+      "name": "item_3",
+      "value": 66.41503794751712,
+      "description": "IOKTVMVEMKBBSXBUSNUL",
+      "attributes": {
+        "color": "green",
+        "size": "large",
+        "weight": 3.4337178809555446
+      }
+    },
+    {
+      "id": 4,
+      "name": "item_4",
+      "value": 47.275084963982664,
+      "description": "BBGIJEQFCRUSUFYQXCQG",
+      "attributes": {
+        "color": "green",
+        "size": "large",
+        "weight": 6.088425900348363
+      }
+    }
+  ]
+}

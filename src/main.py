@@ -11,14 +11,14 @@ import json
 import tempfile
 import logging
 from typing import List, Optional
-from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException
+from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 import requests
 from bs4 import BeautifulSoup
 import pathlib
-from src.table_parser import TableTransformer
-from src.redis_client import RedisClient
+from table_parser import TableTransformer
+from redis_client import RedisClient
 
 # Make sure json is imported at the top level
 import json
@@ -63,9 +63,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# No middleware - we'll use direct validation in each endpoint
+
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger("claryai")
+logger.setLevel(logging.DEBUG)
+logger.info("Logger initialized")
 
 # Initialize TableTransformer
 table_transformer = TableTransformer()
@@ -101,15 +108,20 @@ def init_db():
 # Validate API key
 def validate_api_key(api_key: str) -> bool:
     if not api_key:
+        print("API key is None or empty")
         return False
 
+    print(f"Validating API key: {api_key}")
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT key FROM api_keys WHERE key = ?", (api_key,))
     result = cursor.fetchone()
     conn.close()
 
+    print(f"API key validation result: {result}")
     return result is not None
+
+# No API key dependency - we'll use direct validation in each endpoint
 
 # Update document count for API key
 def update_document_count(api_key: str) -> None:
@@ -155,7 +167,14 @@ def parse_file(file_obj):
             el_text = str(el)
 
             # Check if this element might be a table
-            if el_type == "Table" or (el_type == "Text" and ('|' in el_text or '+---+' in el_text)):
+            if el_type == "Table" or (el_type == "Text" and
+                                     ('|' in el_text or
+                                      '+---+' in el_text or
+                                      '----' in el_text or
+                                      '=====' in el_text or
+                                      (el_text.count('\n') >= 2 and
+                                       any(line.strip().startswith('-') and line.strip().endswith('-')
+                                           for line in el_text.split('\n'))))):
                 # Try to parse as a table
                 table_data = table_transformer.parse_text_table(el_text)
                 elements.append(table_data)
@@ -177,7 +196,7 @@ def parse_file(file_obj):
 if USE_LLM:
     try:
         # Use the LLM integration module
-        from src.llm_integration import get_llm_integration, PROMPT_TEMPLATES
+        from llm_integration import get_llm_integration, PROMPT_TEMPLATES
         llm_integration = get_llm_integration()
         if llm_integration:
             llm = llm_integration
@@ -218,26 +237,52 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
                 content = await file.read()
                 f.write(content)
 
-            # Use Unstructured.io to parse the file
-            try:
-                from unstructured.partition.auto import partition
-                elements_raw = partition(tmp_path)
-                elements = []
+            # Check if it's a JSON file
+            if extension.lower() == 'json':
+                try:
+                    with open(tmp_path, 'r') as f:
+                        json_data = json.load(f)
 
-                for el in elements_raw:
-                    el_type = str(type(el).__name__)
-                    el_text = str(el)
-
-                    # Check if this element might be a table
-                    if el_type == "Table" or (el_type == "Text" and ('|' in el_text or '+---+' in el_text)):
-                        # Try to parse as a table
-                        table_data = table_transformer.parse_text_table(el_text)
-                        elements.append(table_data)
+                    # Convert JSON to elements
+                    if isinstance(json_data, dict):
+                        elements = [{"type": "JSONObject", "text": json.dumps(json_data, indent=2)}]
+                    elif isinstance(json_data, list):
+                        elements = [{"type": "JSONArray", "text": json.dumps(json_data, indent=2)}]
                     else:
-                        elements.append({"type": el_type, "text": el_text})
-            except ImportError:
-                logger.error("Unstructured.io not available")
-                elements = [{"type": "Error", "text": "Unstructured.io not available"}]
+                        elements = [{"type": "JSONValue", "text": json.dumps(json_data)}]
+
+                    logger.info(f"Parsed JSON file: {file.filename}")
+                except json.JSONDecodeError as e:
+                    logger.error(f"Invalid JSON file: {str(e)}")
+                    elements = [{"type": "Error", "text": f"Invalid JSON file: {str(e)}"}]
+            else:
+                # Use Unstructured.io to parse the file
+                try:
+                    from unstructured.partition.auto import partition
+                    elements_raw = partition(tmp_path)
+                    elements = []
+
+                    for el in elements_raw:
+                        el_type = str(type(el).__name__)
+                        el_text = str(el)
+
+                        # Check if this element might be a table
+                        if el_type == "Table" or (el_type == "Text" and
+                                                 ('|' in el_text or
+                                                  '+---+' in el_text or
+                                                  '----' in el_text or
+                                                  '=====' in el_text or
+                                                  (el_text.count('\n') >= 2 and
+                                                   any(line.strip().startswith('-') and line.strip().endswith('-')
+                                                       for line in el_text.split('\n'))))):
+                            # Try to parse as a table
+                            table_data = table_transformer.parse_text_table(el_text)
+                            elements.append(table_data)
+                        else:
+                            elements.append({"type": el_type, "text": el_text})
+                except ImportError:
+                    logger.error("Unstructured.io not available")
+                    elements = [{"type": "Error", "text": "Unstructured.io not available"}]
 
         elif source_type == "sql" and source_url:
             # Use SQLAlchemy to connect to the database
@@ -322,7 +367,7 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
                 # Example: s3://{"aws_access_key_id":"key","aws_secret_access_key":"secret"}/bucket/key
                 # Example: dropbox://{"access_token":"xyz"}/path/to/file
 
-                from src.cloud_connectors import get_connector as get_cloud_connector
+                from cloud_connectors import get_connector as get_cloud_connector
                 import json
 
                 # Parse the URL
@@ -518,38 +563,87 @@ async def parse_document(file: Optional[UploadFile] = None, source_type: str = "
 # Process document asynchronously
 async def process_document(task_id: str, file: Optional[UploadFile] = None,
                           source_type: str = "file", source_url: Optional[str] = None,
-                          chunk_strategy: str = "paragraph", api_key: Optional[str] = None) -> dict:
+                          chunk_strategy: str = "paragraph", api_key: Optional[str] = None,
+                          batch_id: Optional[str] = None) -> dict:
     """Process document asynchronously and store result temporarily"""
-    result = await parse_document(file, source_type, source_url, chunk_strategy)
+    try:
+        # Update task status to processing
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            task_id TEXT PRIMARY KEY,
+            status TEXT,
+            api_key TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            batch_id TEXT
+        )
+        """)
+        cursor.execute("UPDATE tasks SET status = ? WHERE task_id = ?", ("processing", task_id))
+        conn.commit()
 
-    # Store task status in SQLite
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS tasks (
-        task_id TEXT PRIMARY KEY,
-        status TEXT,
-        api_key TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
-    cursor.execute("INSERT INTO tasks (task_id, status, api_key) VALUES (?, ?, ?)",
-                  (task_id, "completed", api_key))
-    conn.commit()
-    conn.close()
+        # Process the document
+        result = await parse_document(file, source_type, source_url, chunk_strategy)
 
-    # Store result in Redis if available
-    if redis_client.is_connected():
-        redis_client.store_task_result(task_id, result)
-        logger.info(f"Task result stored in Redis for task_id: {task_id}")
-    else:
-        logger.warning(f"Redis not available, task result not cached for task_id: {task_id}")
+        # Update task status to completed
+        cursor.execute("UPDATE tasks SET status = ? WHERE task_id = ?", ("completed", task_id))
 
-    # Update document count for the API key
-    if api_key:
-        update_document_count(api_key)
+        # If part of a batch, update batch status
+        if batch_id:
+            # Create batches table if it doesn't exist
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS batches (
+                batch_id TEXT PRIMARY KEY,
+                status TEXT,
+                api_key TEXT,
+                total_tasks INTEGER,
+                completed_tasks INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """)
 
-    return result
+            # Increment completed_tasks count
+            cursor.execute("UPDATE batches SET completed_tasks = completed_tasks + 1 WHERE batch_id = ?", (batch_id,))
+
+            # Check if all tasks in the batch are completed
+            cursor.execute("SELECT total_tasks, completed_tasks FROM batches WHERE batch_id = ?", (batch_id,))
+            batch_info = cursor.fetchone()
+
+            if batch_info and batch_info[0] == batch_info[1]:
+                # All tasks completed, update batch status
+                cursor.execute("UPDATE batches SET status = ? WHERE batch_id = ?", ("completed", batch_id))
+                logger.info(f"Batch {batch_id} completed")
+
+        conn.commit()
+        conn.close()
+
+        # Store result in Redis if available
+        if redis_client.is_connected():
+            redis_client.store_task_result(task_id, result)
+            logger.info(f"Task result stored in Redis for task_id: {task_id}")
+        else:
+            logger.warning(f"Redis not available, task result not cached for task_id: {task_id}")
+
+        # Update document count for the API key
+        if api_key:
+            update_document_count(api_key)
+
+        return result
+    except Exception as e:
+        logger.error(f"Error processing document for task {task_id}: {str(e)}")
+
+        # Update task status to failed
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("UPDATE tasks SET status = ? WHERE task_id = ?", ("failed", task_id))
+            conn.commit()
+            conn.close()
+        except Exception as db_error:
+            logger.error(f"Error updating task status: {str(db_error)}")
+
+        # Return error result
+        return {"status": "failed", "error": str(e)}
 
 # API Endpoints
 
@@ -558,12 +652,16 @@ async def process_document(task_id: str, file: Optional[UploadFile] = None,
 @app.get("/")
 async def root():
     """Root endpoint with API information"""
+    print("Root endpoint called")
+
+    # No authentication required for root endpoint
     return {
         "name": "ClaryAI",
         "description": "A self-hosted API for parsing documents into LLM-ready JSON outputs with zero data retention.",
         "version": "0.1.0",
         "endpoints": [
-            "/parse", "/query", "/generate_schema", "/agent", "/match", "/status/{task_id}", "/analyze_image"
+            "/parse", "/query", "/generate_schema", "/agent", "/match", "/status/{task_id}",
+            "/analyze_image", "/batch", "/usage_report"
         ],
         "llm_enabled": USE_LLM,
         "llm_model": LLM_MODEL if USE_LLM else None,
@@ -573,26 +671,28 @@ async def root():
 @app.post("/analyze_image")
 async def analyze_image(
     file: UploadFile = File(...),
-    api_key: str = None,
     extract_text: bool = False,
-    detect_objects: bool = False
+    detect_objects: bool = False,
+    api_key: str = None
 ):
     """
     Analyze an image using the LLM.
 
     - **file**: Uploaded image file
-    - **api_key**: API key for authentication
     - **extract_text**: Whether to extract text from the image
     - **detect_objects**: Whether to detect objects in the image
+    - **api_key**: API key for authentication
     """
+    print(f"Analyze image endpoint called with API key: {api_key}")
+
+    if not api_key or not validate_api_key(api_key):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
     if not USE_LLM:
         raise HTTPException(status_code=400, detail="LLM integration is disabled")
 
     if LLM_MODEL != "phi-4-multimodal":
         raise HTTPException(status_code=400, detail="Image analysis requires phi-4-multimodal model")
-
-    if not api_key or not validate_api_key(api_key):
-        raise HTTPException(status_code=401, detail="API key required")
 
     # Validate file type
     allowed_extensions = ["jpg", "jpeg", "png", "gif", "webp"]
@@ -651,24 +751,24 @@ async def analyze_image(
 async def parse_document_endpoint(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(None),
-    api_key: str = None,
     source_type: str = "file",
     source_url: str = None,
     chunk_strategy: str = "paragraph",
-    async_processing: bool = False
+    async_processing: bool = False,
+    api_key: str = None
 ):
     """
     Parse a document from various sources into structured JSON.
 
     - **file**: Uploaded file (for file source_type)
-    - **api_key**: API key for authentication
     - **source_type**: Type of source (file, sql, api, web, cloud)
     - **source_url**: URL or connection string for non-file sources
     - **chunk_strategy**: Chunking strategy (sentence, paragraph, fixed)
     - **async_processing**: Whether to process document asynchronously using Redis queue
+    - **api_key**: API key for authentication
     """
     if not api_key or not validate_api_key(api_key):
-        raise HTTPException(status_code=401, detail="API key required")
+        raise HTTPException(status_code=401, detail="Invalid API key")
 
     # Generate task ID
     task_id = str(uuid.uuid4())
@@ -763,19 +863,23 @@ async def parse_document_endpoint(
     return {"task_id": task_id, "status": "processing"}
 
 @app.post("/query")
-async def query_document(query: str, api_key: str = None, use_cache: bool = True):
+async def query_document(
+    query: str,
+    use_cache: bool = True,
+    api_key: str = None
+):
     """
     Query parsed documents using LLM.
 
     - **query**: Query string
-    - **api_key**: API key for authentication
     - **use_cache**: Whether to use cached responses
+    - **api_key**: API key for authentication
     """
+    if not api_key or not validate_api_key(api_key):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
     if not USE_LLM:
         raise HTTPException(status_code=400, detail="LLM integration is disabled")
-
-    if not api_key or not validate_api_key(api_key):
-        raise HTTPException(status_code=401, detail="API key required")
 
     # Check cache first if enabled and Redis is available
     if use_cache and redis_client.is_connected():
@@ -819,11 +923,11 @@ async def generate_schema(
     - **file**: Uploaded file
     - **api_key**: API key for authentication
     """
+    if not api_key or not validate_api_key(api_key):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
     if not USE_LLM:
         raise HTTPException(status_code=400, detail="LLM integration is disabled")
-
-    if not api_key or not validate_api_key(api_key):
-        raise HTTPException(status_code=401, detail="API key required")
 
     # Parse document first
     elements = await parse_document(file)
@@ -859,11 +963,11 @@ async def agent_task(
     - **file**: Uploaded file
     - **api_key**: API key for authentication
     """
+    if not api_key or not validate_api_key(api_key):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
     if not USE_LLM:
         raise HTTPException(status_code=400, detail="LLM integration is disabled")
-
-    if not api_key or not validate_api_key(api_key):
-        raise HTTPException(status_code=401, detail="API key required")
 
     # Parse document first
     elements = await parse_document(file)
@@ -932,7 +1036,7 @@ async def three_way_match(
     - **api_key**: API key for authentication
     """
     if not api_key or not validate_api_key(api_key):
-        raise HTTPException(status_code=401, detail="API key required")
+        raise HTTPException(status_code=401, detail="Invalid API key")
 
     # Check if we're using task IDs or files
     if invoice_task_id and po_task_id and grn_task_id:
@@ -1513,36 +1617,436 @@ def extract_document_info(document_data, doc_type):
 
     return info
 
+@app.post("/batch")
+async def batch_process_documents(
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = None,
+    source_type: str = "file",
+    source_urls: List[str] = None,
+    chunk_strategy: str = "paragraph",
+    async_processing: bool = False,
+    max_concurrent: int = 5,
+    api_key: str = None
+):
+    """
+    Process multiple documents in a batch.
+
+    - **files**: List of uploaded files
+    - **source_type**: Type of source (file, sql, api, web, cloud)
+    - **source_urls**: List of URLs or connection strings for non-file sources
+    - **chunk_strategy**: Chunking strategy (sentence, paragraph, fixed)
+    - **async_processing**: Whether to process documents asynchronously using Redis queue
+    - **max_concurrent**: Maximum number of concurrent tasks (only applies to async processing)
+    - **api_key**: API key for authentication
+    """
+    if not api_key or not validate_api_key(api_key):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+    # Validate input
+    if source_type == "file" and not files:
+        raise HTTPException(status_code=400, detail="Files are required for file source type")
+
+    if source_type != "file" and not source_urls:
+        raise HTTPException(status_code=400, detail="Source URLs are required for non-file source types")
+
+    # Generate batch ID
+    batch_id = str(uuid.uuid4())
+
+    # Create tasks table if it doesn't exist
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tasks (
+        task_id TEXT PRIMARY KEY,
+        status TEXT,
+        api_key TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        batch_id TEXT
+    )
+    """)
+
+    # Create batches table if it doesn't exist
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS batches (
+        batch_id TEXT PRIMARY KEY,
+        status TEXT,
+        api_key TEXT,
+        total_tasks INTEGER,
+        completed_tasks INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    # Process files
+    task_ids = []
+
+    if source_type == "file" and files:
+        # Insert batch record
+        cursor.execute(
+            "INSERT INTO batches (batch_id, status, api_key, total_tasks) VALUES (?, ?, ?, ?)",
+            (batch_id, "processing", api_key, len(files))
+        )
+        conn.commit()
+
+        for file in files:
+            task_id = str(uuid.uuid4())
+            task_ids.append(task_id)
+
+            # Insert task record
+            cursor.execute(
+                "INSERT INTO tasks (task_id, status, api_key, batch_id) VALUES (?, ?, ?, ?)",
+                (task_id, "queued", api_key, batch_id)
+            )
+
+            if async_processing and redis_client.is_connected():
+                # For file uploads, save to disk first
+                file_path = None
+                try:
+                    # Create data directory if it doesn't exist
+                    os.makedirs("data/uploads", exist_ok=True)
+
+                    # Read file content
+                    file_content = await file.read()
+                    if not file_content:
+                        logger.error(f"File content is empty for task {task_id}")
+                        continue
+
+                    # Save file to disk
+                    file_path = f"data/uploads/{task_id}_{file.filename}"
+                    with open(file_path, "wb") as f:
+                        f.write(file_content)
+
+                    logger.info(f"File saved to {file_path} for task {task_id}")
+
+                    # Add task to Redis queue
+                    task_data = {
+                        "task_id": task_id,
+                        "source_type": source_type,
+                        "source_url": None,
+                        "chunk_strategy": chunk_strategy,
+                        "api_key": api_key,
+                        "file_path": file_path,
+                        "batch_id": batch_id
+                    }
+
+                    # Add task to Redis queue with rate limiting
+                    redis_client.add_to_queue("document_processing", task_data, max_concurrent)
+
+                except Exception as e:
+                    logger.error(f"Error processing file for task {task_id}: {str(e)}")
+                    cursor.execute("UPDATE tasks SET status = ? WHERE task_id = ?", ("failed", task_id))
+            else:
+                # Process synchronously using background tasks
+                background_tasks.add_task(
+                    process_document, task_id, file, source_type, None, chunk_strategy, api_key, batch_id
+                )
+
+    elif source_urls:
+        # Insert batch record
+        cursor.execute(
+            "INSERT INTO batches (batch_id, status, api_key, total_tasks) VALUES (?, ?, ?, ?)",
+            (batch_id, "processing", api_key, len(source_urls))
+        )
+        conn.commit()
+
+        for source_url in source_urls:
+            task_id = str(uuid.uuid4())
+            task_ids.append(task_id)
+
+            # Insert task record
+            cursor.execute(
+                "INSERT INTO tasks (task_id, status, api_key, batch_id) VALUES (?, ?, ?, ?)",
+                (task_id, "queued", api_key, batch_id)
+            )
+
+            if async_processing and redis_client.is_connected():
+                # Add task to Redis queue
+                task_data = {
+                    "task_id": task_id,
+                    "source_type": source_type,
+                    "source_url": source_url,
+                    "chunk_strategy": chunk_strategy,
+                    "api_key": api_key,
+                    "file_path": None,
+                    "batch_id": batch_id
+                }
+
+                # Add task to Redis queue with rate limiting
+                redis_client.add_to_queue("document_processing", task_data, max_concurrent)
+            else:
+                # Process synchronously using background tasks
+                background_tasks.add_task(
+                    process_document, task_id, None, source_type, source_url, chunk_strategy, api_key, batch_id
+                )
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "batch_id": batch_id,
+        "status": "processing",
+        "total_tasks": len(task_ids),
+        "task_ids": task_ids
+    }
+
 @app.get("/status/{task_id}")
-async def get_task_status(task_id: str, api_key: str = None, include_result: bool = False):
+async def get_task_status(
+    request: Request,
+    task_id: str,
+    include_result: bool = False,
+    api_key: str = None
+):
     """
     Check status of an asynchronous task.
 
     - **task_id**: Task ID
-    - **api_key**: API key for authentication
     - **include_result**: Whether to include the task result in the response
+    - **api_key**: API key from query parameter
     """
-    if not api_key or not validate_api_key(api_key):
+    # Print request information
+    logger.info(f"Request path: {request.url.path}")
+    logger.info(f"Request headers: {dict(request.headers)}")
+    logger.info(f"Request query params: {dict(request.query_params)}")
+
+    # Try to get API key from query parameter or header
+    effective_api_key = api_key
+
+    if not effective_api_key:
+        # Try to get API key from headers
+        for header_name in ["x-api-key", "X-API-Key", "x-api-key", "X-Api-Key", "api_key", "API_KEY", "apikey", "APIKEY"]:
+            header_value = request.headers.get(header_name)
+            if header_value:
+                logger.info(f"Found API key in header {header_name}: {header_value}")
+                effective_api_key = header_value
+                break
+
+    logger.info(f"API key from query parameter: {api_key}")
+    logger.info(f"Effective API key: {effective_api_key}")
+
+    if not effective_api_key or not validate_api_key(effective_api_key):
+        logger.info(f"Invalid API key: {effective_api_key}")
         raise HTTPException(status_code=401, detail="API key required")
 
     # Check task status in SQLite
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT status FROM tasks WHERE task_id = ? AND api_key = ?", (task_id, api_key))
-    status_result = cursor.fetchone()
+    cursor.execute("SELECT status, batch_id FROM tasks WHERE task_id = ? AND api_key = ?", (task_id, api_key))
+    result = cursor.fetchone()
     conn.close()
 
-    if not status_result:
+    if not result:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    status = status_result[0]
+    status, batch_id = result
     response = {"task_id": task_id, "status": status}
+
+    if batch_id:
+        response["batch_id"] = batch_id
 
     # If requested and task is completed, try to get result from Redis
     if include_result and status == "completed" and redis_client.is_connected():
         task_result = redis_client.get_task_result(task_id)
         if task_result:
             response["result"] = task_result
+
+    return response
+
+@app.get("/status/batch/{batch_id}")
+async def get_batch_status(
+    batch_id: str,
+    include_results: bool = False,
+    api_key: str = None
+):
+    """
+    Check status of a batch processing job.
+
+    - **batch_id**: Batch ID
+    - **include_results**: Whether to include the task results in the response
+    - **api_key**: API key for authentication
+    """
+    if not api_key or not validate_api_key(api_key):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+    # Check batch status in SQLite
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT status, total_tasks, completed_tasks FROM batches WHERE batch_id = ? AND api_key = ?",
+                  (batch_id, api_key))
+    batch_result = cursor.fetchone()
+
+    if not batch_result:
+        raise HTTPException(status_code=404, detail="Batch not found")
+
+    batch_status, total_tasks, completed_tasks = batch_result
+
+    # Get all tasks in this batch
+    cursor.execute("SELECT task_id, status FROM tasks WHERE batch_id = ? AND api_key = ?",
+                  (batch_id, api_key))
+    task_results = cursor.fetchall()
+    conn.close()
+
+    tasks = [{"task_id": task_id, "status": status} for task_id, status in task_results]
+
+    response = {
+        "batch_id": batch_id,
+        "status": batch_status,
+        "total_tasks": total_tasks,
+        "completed_tasks": completed_tasks,
+        "progress_percentage": (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0,
+        "tasks": tasks
+    }
+
+    # If requested and Redis is available, include results for completed tasks
+    if include_results and redis_client.is_connected():
+        results = {}
+        for task in tasks:
+            if task["status"] == "completed":
+                task_result = redis_client.get_task_result(task["task_id"])
+                if task_result:
+                    results[task["task_id"]] = task_result
+
+        if results:
+            response["results"] = results
+
+    return response
+
+@app.get("/usage_report")
+async def usage_report(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    api_key: str = None
+):
+    """
+    Generate usage report for an API key.
+
+    - **start_date**: Start date for the report (format: YYYY-MM-DD)
+    - **end_date**: End date for the report (format: YYYY-MM-DD)
+    - **api_key**: API key for authentication
+    """
+    if not api_key or not validate_api_key(api_key):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+    # Validate dates if provided
+    if start_date:
+        try:
+            import datetime
+            datetime.datetime.strptime(start_date, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD")
+
+    if end_date:
+        try:
+            import datetime
+            datetime.datetime.strptime(end_date, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD")
+
+    # Connect to database
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    # Get API key information
+    cursor.execute("SELECT document_count, reset_date FROM api_keys WHERE key = ?", (api_key,))
+    api_key_info = cursor.fetchone()
+
+    if not api_key_info:
+        conn.close()
+        raise HTTPException(status_code=404, detail="API key not found")
+
+    document_count, reset_date = api_key_info
+
+    # Create tasks_usage table if it doesn't exist
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tasks_usage (
+        task_id TEXT PRIMARY KEY,
+        api_key TEXT,
+        source_type TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        completed_at TIMESTAMP,
+        status TEXT,
+        document_size INTEGER DEFAULT 0,
+        processing_time REAL DEFAULT 0
+    )
+    """)
+
+    # Build query based on date filters
+    query = "SELECT source_type, COUNT(*), SUM(document_size), AVG(processing_time) FROM tasks_usage WHERE api_key = ?"
+    params = [api_key]
+
+    if start_date:
+        query += " AND created_at >= ?"
+        params.append(f"{start_date} 00:00:00")
+
+    if end_date:
+        query += " AND created_at <= ?"
+        params.append(f"{end_date} 23:59:59")
+
+    query += " GROUP BY source_type"
+
+    # Execute query
+    cursor.execute(query, params)
+    usage_by_source = cursor.fetchall()
+
+    # Get batch processing usage
+    cursor.execute("""
+    SELECT COUNT(*), SUM(total_tasks) FROM batches
+    WHERE api_key = ? AND status = 'completed'
+    """, (api_key,))
+    batch_usage = cursor.fetchone()
+
+    # Get total tasks
+    cursor.execute("""
+    SELECT COUNT(*) FROM tasks
+    WHERE api_key = ?
+    """, (api_key,))
+    total_tasks = cursor.fetchone()[0]
+
+    # Get tasks by status
+    cursor.execute("""
+    SELECT status, COUNT(*) FROM tasks
+    WHERE api_key = ?
+    GROUP BY status
+    """, (api_key,))
+    tasks_by_status = cursor.fetchall()
+
+    # Get LLM usage if Redis is available
+    llm_usage = None
+    if redis_client.is_connected():
+        llm_usage = redis_client.get_llm_usage(api_key)
+
+    conn.close()
+
+    # Format the response
+    source_type_usage = []
+    for source_type, count, total_size, avg_time in usage_by_source:
+        source_type_usage.append({
+            "source_type": source_type,
+            "count": count,
+            "total_size_bytes": total_size if total_size else 0,
+            "avg_processing_time_seconds": avg_time if avg_time else 0
+        })
+
+    status_counts = {}
+    for status, count in tasks_by_status:
+        status_counts[status] = count
+
+    response = {
+        "api_key": api_key,
+        "document_count": document_count,
+        "reset_date": reset_date,
+        "total_tasks": total_tasks,
+        "tasks_by_status": status_counts,
+        "source_type_usage": source_type_usage,
+    }
+
+    if batch_usage and batch_usage[0]:
+        response["batch_processing"] = {
+            "total_batches": batch_usage[0],
+            "total_batch_tasks": batch_usage[1] if batch_usage[1] else 0
+        }
+
+    if llm_usage:
+        response["llm_usage"] = llm_usage
 
     return response
 

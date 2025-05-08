@@ -1,0 +1,31 @@
+GOODS RECEIPT NOTE
+
+GRN Number: GRN-2023-001
+Date: May 15, 2023
+
+Receiver:
+XYZ Company
+456 Client Ave.
+Client City, CC 67890
+
+Supplier:
+Acme Corporation
+123 Business St.
+Business City, BC 12345
+
+Purchase Order: PO-2023-001
+Delivery Date: May 15, 2023
+
+Item                  Ordered     Received     Condition
+---------------------------------------------------------
+Widget A              10          10           Good
+Widget B              5           5            Good
+Service Package       1           1            Completed
+---------------------------------------------------------
+
+Notes:
+All items received in good condition.
+Service package implementation completed successfully.
+
+Received by: Jane Doe
+Title: Warehouse Manager

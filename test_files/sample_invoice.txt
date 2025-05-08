@@ -1,0 +1,32 @@
+INVOICE
+
+Invoice Number: INV-2023-001
+Date: May 7, 2023
+Due Date: June 7, 2023
+
+Vendor:
+Acme Corporation
+123 Business St.
+Business City, BC 12345
+
+Bill To:
+XYZ Company
+456 Client Ave.
+Client City, CC 67890
+
+Purchase Order: PO-2023-001
+
+Item                  Quantity    Unit Price    Total
+---------------------------------------------------------
+Widget A              10          $25.00        $250.00
+Widget B              5           $30.00        $150.00
+Service Package       1           $500.00       $500.00
+---------------------------------------------------------
+                                  Subtotal:     $900.00
+                                  Tax (10%):    $90.00
+                                  Total:        $990.00
+
+Payment Terms: Net 30
+Payment Method: Bank Transfer
+
+Thank you for your business!

@@ -1,0 +1,668 @@
+{
+  "single_file": {
+    "txt_small": {
+      "file_key": "txt_small",
+      "file_path": "test_files/multi_batch/test_small.txt",
+      "status_code": 200,
+      "task_id": null,
+      "task_status": {
+        "status": "unknown",
+        "error": "Max retries reached"
+      },
+      "success": true
+    },
+    "txt_medium": {
+      "file_key": "txt_medium",
+      "file_path": "test_files/multi_batch/test_medium.txt",
+      "status_code": 200,
+      "task_id": null,
+      "task_status": {
+        "status": "unknown",
+        "error": "Max retries reached"
+      },
+      "success": true
+    },
+    "txt_large": {
+      "file_key": "txt_large",
+      "file_path": "test_files/multi_batch/test_large.txt",
+      "status_code": 200,
+      "task_id": null,
+      "task_status": {
+        "status": "unknown",
+        "error": "Max retries reached"
+      },
+      "success": true
+    },
+    "csv_small": {
+      "file_key": "csv_small",
+      "file_path": "test_files/multi_batch/test_small.csv",
+      "status_code": 200,
+      "task_id": null,
+      "task_status": {
+        "status": "unknown",
+        "error": "Max retries reached"
+      },
+      "success": true
+    },
+    "csv_medium": {
+      "file_key": "csv_medium",
+      "file_path": "test_files/multi_batch/test_medium.csv",
+      "status_code": 200,
+      "task_id": null,
+      "task_status": {
+        "status": "unknown",
+        "error": "Max retries reached"
+      },
+      "success": true
+    },
+    "csv_large": {
+      "file_key": "csv_large",
+      "file_path": "test_files/multi_batch/test_large.csv",
+      "status_code": 200,
+      "task_id": null,
+      "task_status": {
+        "status": "unknown",
+        "error": "Max retries reached"
+      },
+      "success": true
+    },
+    "json_small": {
+      "file_key": "json_small",
+      "file_path": "test_files/multi_batch/test_small.json",
+      "status_code": 500,
+      "error": "Internal Server Error",
+      "success": false
+    },
+    "json_medium": {
+      "file_key": "json_medium",
+      "file_path": "test_files/multi_batch/test_medium.json",
+      "status_code": 500,
+      "error": "Internal Server Error",
+      "success": false
+    },
+    "json_large": {
+      "file_key": "json_large",
+      "file_path": "test_files/multi_batch/test_large.json",
+      "status_code": 500,
+      "error": "Internal Server Error",
+      "success": false
+    },
+    "html_small": {
+      "file_key": "html_small",
+      "file_path": "test_files/multi_batch/test_small.html",
+      "status_code": 200,
+      "task_id": null,
+      "task_status": {
+        "status": "unknown",
+        "error": "Max retries reached"
+      },
+      "success": true
+    },
+    "html_medium": {
+      "file_key": "html_medium",
+      "file_path": "test_files/multi_batch/test_medium.html",
+      "status_code": 200,
+      "task_id": null,
+      "task_status": {
+        "status": "unknown",
+        "error": "Max retries reached"
+      },
+      "success": true
+    },
+    "html_large": {
+      "file_key": "html_large",
+      "file_path": "test_files/multi_batch/test_large.html",
+      "status_code": 200,
+      "task_id": null,
+      "task_status": {
+        "status": "unknown",
+        "error": "Max retries reached"
+      },
+      "success": true
+    }
+  },
+  "multi_batch": {
+    "same_type_txt": {
+      "file_keys": [
+        "txt_small",
+        "txt_medium",
+        "txt_large"
+      ],
+      "status_code": 200,
+      "batch_id": "2eae0032-2392-4284-938c-eb183e25b0ca",
+      "task_ids": [
+        "6fc7d88c-ef8b-4161-87c3-d5275cac5aca",
+        "c86c55d7-f1be-4b95-bf0a-a250fe11be0d",
+        "b0352397-ada6-4a22-a666-b0edd4827929"
+      ],
+      "task_statuses": {
+        "6fc7d88c-ef8b-4161-87c3-d5275cac5aca": {
+          "task_id": "6fc7d88c-ef8b-4161-87c3-d5275cac5aca",
+          "status": "failed",
+          "file_name": "test_small.txt"
+        },
+        "c86c55d7-f1be-4b95-bf0a-a250fe11be0d": {
+          "task_id": "c86c55d7-f1be-4b95-bf0a-a250fe11be0d",
+          "status": "failed",
+          "file_name": "test_medium.txt"
+        },
+        "b0352397-ada6-4a22-a666-b0edd4827929": {
+          "task_id": "b0352397-ada6-4a22-a666-b0edd4827929",
+          "status": "failed",
+          "file_name": "test_large.txt"
+        }
+      },
+      "batch_status": {
+        "batch_id": "2eae0032-2392-4284-938c-eb183e25b0ca",
+        "status": "processing",
+        "total_tasks": 3,
+        "completed_tasks": 0,
+        "progress_percentage": 0.0,
+        "tasks": [
+          {
+            "task_id": "6fc7d88c-ef8b-4161-87c3-d5275cac5aca",
+            "status": "failed",
+            "file_name": "test_small.txt"
+          },
+          {
+            "task_id": "c86c55d7-f1be-4b95-bf0a-a250fe11be0d",
+            "status": "failed",
+            "file_name": "test_medium.txt"
+          },
+          {
+            "task_id": "b0352397-ada6-4a22-a666-b0edd4827929",
+            "status": "failed",
+            "file_name": "test_large.txt"
+          }
+        ]
+      },
+      "success": true
+    },
+    "same_type_csv": {
+      "file_keys": [
+        "csv_small",
+        "csv_medium",
+        "csv_large"
+      ],
+      "status_code": 200,
+      "batch_id": "19761203-9d51-4443-b39b-82666ccbf05d",
+      "task_ids": [
+        "bffd4d2a-dfde-4a95-b65e-78563a04278c",
+        "0ccbef99-3ca4-4e52-aa10-c282b687ac28",
+        "89e4523a-f86c-40ef-9438-d80d4c0c6258"
+      ],
+      "task_statuses": {
+        "bffd4d2a-dfde-4a95-b65e-78563a04278c": {
+          "task_id": "bffd4d2a-dfde-4a95-b65e-78563a04278c",
+          "status": "failed",
+          "file_name": "test_small.csv"
+        },
+        "0ccbef99-3ca4-4e52-aa10-c282b687ac28": {
+          "task_id": "0ccbef99-3ca4-4e52-aa10-c282b687ac28",
+          "status": "failed",
+          "file_name": "test_medium.csv"
+        },
+        "89e4523a-f86c-40ef-9438-d80d4c0c6258": {
+          "task_id": "89e4523a-f86c-40ef-9438-d80d4c0c6258",
+          "status": "failed",
+          "file_name": "test_large.csv"
+        }
+      },
+      "batch_status": {
+        "batch_id": "19761203-9d51-4443-b39b-82666ccbf05d",
+        "status": "processing",
+        "total_tasks": 3,
+        "completed_tasks": 0,
+        "progress_percentage": 0.0,
+        "tasks": [
+          {
+            "task_id": "bffd4d2a-dfde-4a95-b65e-78563a04278c",
+            "status": "failed",
+            "file_name": "test_small.csv"
+          },
+          {
+            "task_id": "0ccbef99-3ca4-4e52-aa10-c282b687ac28",
+            "status": "failed",
+            "file_name": "test_medium.csv"
+          },
+          {
+            "task_id": "89e4523a-f86c-40ef-9438-d80d4c0c6258",
+            "status": "failed",
+            "file_name": "test_large.csv"
+          }
+        ]
+      },
+      "success": true
+    },
+    "same_type_json": {
+      "file_keys": [
+        "json_small",
+        "json_medium",
+        "json_large"
+      ],
+      "status_code": 200,
+      "batch_id": "c10da82a-fc97-4923-a076-66432fe83d02",
+      "task_ids": [
+        "9130e5ab-e9eb-40c9-8878-d0e78bda14b1",
+        "f3783cc9-103c-4650-88ff-3dc3434f5158",
+        "874ecbcf-9896-4dcb-a0c1-03a7ec52ec5e"
+      ],
+      "task_statuses": {
+        "9130e5ab-e9eb-40c9-8878-d0e78bda14b1": {
+          "task_id": "9130e5ab-e9eb-40c9-8878-d0e78bda14b1",
+          "status": "failed",
+          "file_name": "test_small.json"
+        },
+        "f3783cc9-103c-4650-88ff-3dc3434f5158": {
+          "task_id": "f3783cc9-103c-4650-88ff-3dc3434f5158",
+          "status": "failed",
+          "file_name": "test_medium.json"
+        },
+        "874ecbcf-9896-4dcb-a0c1-03a7ec52ec5e": {
+          "task_id": "874ecbcf-9896-4dcb-a0c1-03a7ec52ec5e",
+          "status": "failed",
+          "file_name": "test_large.json"
+        }
+      },
+      "batch_status": {
+        "batch_id": "c10da82a-fc97-4923-a076-66432fe83d02",
+        "status": "processing",
+        "total_tasks": 3,
+        "completed_tasks": 0,
+        "progress_percentage": 0.0,
+        "tasks": [
+          {
+            "task_id": "9130e5ab-e9eb-40c9-8878-d0e78bda14b1",
+            "status": "failed",
+            "file_name": "test_small.json"
+          },
+          {
+            "task_id": "f3783cc9-103c-4650-88ff-3dc3434f5158",
+            "status": "failed",
+            "file_name": "test_medium.json"
+          },
+          {
+            "task_id": "874ecbcf-9896-4dcb-a0c1-03a7ec52ec5e",
+            "status": "failed",
+            "file_name": "test_large.json"
+          }
+        ]
+      },
+      "success": true
+    },
+    "same_type_html": {
+      "file_keys": [
+        "html_small",
+        "html_medium",
+        "html_large"
+      ],
+      "status_code": 200,
+      "batch_id": "3b616354-42ea-411a-9350-9c32236da588",
+      "task_ids": [
+        "4233029f-6e55-4270-aabb-82ba7d0ebdc6",
+        "c225bcad-3b79-4b06-99a2-97c90a99c378",
+        "1e80d432-965f-4db2-bc50-4c975db071a7"
+      ],
+      "task_statuses": {
+        "4233029f-6e55-4270-aabb-82ba7d0ebdc6": {
+          "task_id": "4233029f-6e55-4270-aabb-82ba7d0ebdc6",
+          "status": "failed",
+          "file_name": "test_small.html"
+        },
+        "c225bcad-3b79-4b06-99a2-97c90a99c378": {
+          "task_id": "c225bcad-3b79-4b06-99a2-97c90a99c378",
+          "status": "failed",
+          "file_name": "test_medium.html"
+        },
+        "1e80d432-965f-4db2-bc50-4c975db071a7": {
+          "task_id": "1e80d432-965f-4db2-bc50-4c975db071a7",
+          "status": "failed",
+          "file_name": "test_large.html"
+        }
+      },
+      "batch_status": {
+        "batch_id": "3b616354-42ea-411a-9350-9c32236da588",
+        "status": "processing",
+        "total_tasks": 3,
+        "completed_tasks": 0,
+        "progress_percentage": 0.0,
+        "tasks": [
+          {
+            "task_id": "4233029f-6e55-4270-aabb-82ba7d0ebdc6",
+            "status": "failed",
+            "file_name": "test_small.html"
+          },
+          {
+            "task_id": "c225bcad-3b79-4b06-99a2-97c90a99c378",
+            "status": "failed",
+            "file_name": "test_medium.html"
+          },
+          {
+            "task_id": "1e80d432-965f-4db2-bc50-4c975db071a7",
+            "status": "failed",
+            "file_name": "test_large.html"
+          }
+        ]
+      },
+      "success": true
+    },
+    "same_size_small": {
+      "file_keys": [
+        "txt_small",
+        "csv_small",
+        "json_small",
+        "html_small"
+      ],
+      "status_code": 200,
+      "batch_id": "c35d189c-e8bf-4cb0-abdb-7d1633f8372c",
+      "task_ids": [
+        "1a410302-e50a-4c1c-8fa8-77e90482971c",
+        "f2f92086-2030-49f6-884f-6d1d45d3a0e5",
+        "9bd80e43-ff99-4dd9-8e58-70b12ec9a975",
+        "fde2d8b2-01b2-4f2b-90de-72780aaf5d61"
+      ],
+      "task_statuses": {
+        "1a410302-e50a-4c1c-8fa8-77e90482971c": {
+          "task_id": "1a410302-e50a-4c1c-8fa8-77e90482971c",
+          "status": "failed",
+          "file_name": "test_small.txt"
+        },
+        "f2f92086-2030-49f6-884f-6d1d45d3a0e5": {
+          "task_id": "f2f92086-2030-49f6-884f-6d1d45d3a0e5",
+          "status": "failed",
+          "file_name": "test_small.csv"
+        },
+        "9bd80e43-ff99-4dd9-8e58-70b12ec9a975": {
+          "task_id": "9bd80e43-ff99-4dd9-8e58-70b12ec9a975",
+          "status": "failed",
+          "file_name": "test_small.json"
+        },
+        "fde2d8b2-01b2-4f2b-90de-72780aaf5d61": {
+          "task_id": "fde2d8b2-01b2-4f2b-90de-72780aaf5d61",
+          "status": "failed",
+          "file_name": "test_small.html"
+        }
+      },
+      "batch_status": {
+        "batch_id": "c35d189c-e8bf-4cb0-abdb-7d1633f8372c",
+        "status": "processing",
+        "total_tasks": 4,
+        "completed_tasks": 0,
+        "progress_percentage": 0.0,
+        "tasks": [
+          {
+            "task_id": "1a410302-e50a-4c1c-8fa8-77e90482971c",
+            "status": "failed",
+            "file_name": "test_small.txt"
+          },
+          {
+            "task_id": "f2f92086-2030-49f6-884f-6d1d45d3a0e5",
+            "status": "failed",
+            "file_name": "test_small.csv"
+          },
+          {
+            "task_id": "9bd80e43-ff99-4dd9-8e58-70b12ec9a975",
+            "status": "failed",
+            "file_name": "test_small.json"
+          },
+          {
+            "task_id": "fde2d8b2-01b2-4f2b-90de-72780aaf5d61",
+            "status": "failed",
+            "file_name": "test_small.html"
+          }
+        ]
+      },
+      "success": true
+    },
+    "same_size_medium": {
+      "file_keys": [
+        "txt_medium",
+        "csv_medium",
+        "json_medium",
+        "html_medium"
+      ],
+      "status_code": 200,
+      "batch_id": "311021f9-a79f-4065-88eb-7d7d5058458d",
+      "task_ids": [
+        "47357d8f-575f-4cde-9533-41f630f10cb7",
+        "68db0ca2-6df8-4522-a54a-063335431dd7",
+        "0ce72bab-2ba7-49b5-909e-d01d9114eee6",
+        "bfc43fe9-79cc-4d34-b174-187dd694705f"
+      ],
+      "task_statuses": {
+        "47357d8f-575f-4cde-9533-41f630f10cb7": {
+          "task_id": "47357d8f-575f-4cde-9533-41f630f10cb7",
+          "status": "failed",
+          "file_name": "test_medium.txt"
+        },
+        "68db0ca2-6df8-4522-a54a-063335431dd7": {
+          "task_id": "68db0ca2-6df8-4522-a54a-063335431dd7",
+          "status": "failed",
+          "file_name": "test_medium.csv"
+        },
+        "0ce72bab-2ba7-49b5-909e-d01d9114eee6": {
+          "task_id": "0ce72bab-2ba7-49b5-909e-d01d9114eee6",
+          "status": "failed",
+          "file_name": "test_medium.json"
+        },
+        "bfc43fe9-79cc-4d34-b174-187dd694705f": {
+          "task_id": "bfc43fe9-79cc-4d34-b174-187dd694705f",
+          "status": "failed",
+          "file_name": "test_medium.html"
+        }
+      },
+      "batch_status": {
+        "batch_id": "311021f9-a79f-4065-88eb-7d7d5058458d",
+        "status": "processing",
+        "total_tasks": 4,
+        "completed_tasks": 0,
+        "progress_percentage": 0.0,
+        "tasks": [
+          {
+            "task_id": "47357d8f-575f-4cde-9533-41f630f10cb7",
+            "status": "failed",
+            "file_name": "test_medium.txt"
+          },
+          {
+            "task_id": "68db0ca2-6df8-4522-a54a-063335431dd7",
+            "status": "failed",
+            "file_name": "test_medium.csv"
+          },
+          {
+            "task_id": "0ce72bab-2ba7-49b5-909e-d01d9114eee6",
+            "status": "failed",
+            "file_name": "test_medium.json"
+          },
+          {
+            "task_id": "bfc43fe9-79cc-4d34-b174-187dd694705f",
+            "status": "failed",
+            "file_name": "test_medium.html"
+          }
+        ]
+      },
+      "success": true
+    },
+    "same_size_large": {
+      "file_keys": [
+        "txt_large",
+        "csv_large",
+        "json_large",
+        "html_large"
+      ],
+      "status_code": 200,
+      "batch_id": "5c208e44-f693-4ad2-a309-cd674376c6ca",
+      "task_ids": [
+        "b9e16054-f23f-49a7-9cb0-e4bb69711cd7",
+        "09187a8b-5a60-4923-bf9b-e205d961dc06",
+        "6621b884-f689-4603-87db-22ccfcbfc67d",
+        "2df1a946-c945-4320-b8bc-038fa187f1ad"
+      ],
+      "task_statuses": {
+        "b9e16054-f23f-49a7-9cb0-e4bb69711cd7": {
+          "task_id": "b9e16054-f23f-49a7-9cb0-e4bb69711cd7",
+          "status": "failed",
+          "file_name": "test_large.txt"
+        },
+        "09187a8b-5a60-4923-bf9b-e205d961dc06": {
+          "task_id": "09187a8b-5a60-4923-bf9b-e205d961dc06",
+          "status": "failed",
+          "file_name": "test_large.csv"
+        },
+        "6621b884-f689-4603-87db-22ccfcbfc67d": {
+          "task_id": "6621b884-f689-4603-87db-22ccfcbfc67d",
+          "status": "failed",
+          "file_name": "test_large.json"
+        },
+        "2df1a946-c945-4320-b8bc-038fa187f1ad": {
+          "task_id": "2df1a946-c945-4320-b8bc-038fa187f1ad",
+          "status": "failed",
+          "file_name": "test_large.html"
+        }
+      },
+      "batch_status": {
+        "batch_id": "5c208e44-f693-4ad2-a309-cd674376c6ca",
+        "status": "processing",
+        "total_tasks": 4,
+        "completed_tasks": 0,
+        "progress_percentage": 0.0,
+        "tasks": [
+          {
+            "task_id": "b9e16054-f23f-49a7-9cb0-e4bb69711cd7",
+            "status": "failed",
+            "file_name": "test_large.txt"
+          },
+          {
+            "task_id": "09187a8b-5a60-4923-bf9b-e205d961dc06",
+            "status": "failed",
+            "file_name": "test_large.csv"
+          },
+          {
+            "task_id": "6621b884-f689-4603-87db-22ccfcbfc67d",
+            "status": "failed",
+            "file_name": "test_large.json"
+          },
+          {
+            "task_id": "2df1a946-c945-4320-b8bc-038fa187f1ad",
+            "status": "failed",
+            "file_name": "test_large.html"
+          }
+        ]
+      },
+      "success": true
+    },
+    "mixed": {
+      "file_keys": [
+        "txt_small",
+        "csv_medium",
+        "json_large",
+        "html_small"
+      ],
+      "status_code": 200,
+      "batch_id": "fbd8c444-754a-4d2d-8172-70a0635571a7",
+      "task_ids": [
+        "46509177-393e-4025-9fdb-916b1492b0b3",
+        "9de6c9a9-6eba-49ff-bb1a-097d2db03893",
+        "1aab5453-b86b-4c22-b84a-ce9e66ca611c",
+        "dde47350-55a8-4d90-8f2c-ce40e6490618"
+      ],
+      "task_statuses": {
+        "46509177-393e-4025-9fdb-916b1492b0b3": {
+          "task_id": "46509177-393e-4025-9fdb-916b1492b0b3",
+          "status": "failed",
+          "file_name": "test_small.txt"
+        },
+        "9de6c9a9-6eba-49ff-bb1a-097d2db03893": {
+          "task_id": "9de6c9a9-6eba-49ff-bb1a-097d2db03893",
+          "status": "failed",
+          "file_name": "test_medium.csv"
+        },
+        "1aab5453-b86b-4c22-b84a-ce9e66ca611c": {
+          "task_id": "1aab5453-b86b-4c22-b84a-ce9e66ca611c",
+          "status": "failed",
+          "file_name": "test_large.json"
+        },
+        "dde47350-55a8-4d90-8f2c-ce40e6490618": {
+          "task_id": "dde47350-55a8-4d90-8f2c-ce40e6490618",
+          "status": "failed",
+          "file_name": "test_small.html"
+        }
+      },
+      "batch_status": {
+        "batch_id": "fbd8c444-754a-4d2d-8172-70a0635571a7",
+        "status": "processing",
+        "total_tasks": 4,
+        "completed_tasks": 0,
+        "progress_percentage": 0.0,
+        "tasks": [
+          {
+            "task_id": "46509177-393e-4025-9fdb-916b1492b0b3",
+            "status": "failed",
+            "file_name": "test_small.txt"
+          },
+          {
+            "task_id": "9de6c9a9-6eba-49ff-bb1a-097d2db03893",
+            "status": "failed",
+            "file_name": "test_medium.csv"
+          },
+          {
+            "task_id": "1aab5453-b86b-4c22-b84a-ce9e66ca611c",
+            "status": "failed",
+            "file_name": "test_large.json"
+          },
+          {
+            "task_id": "dde47350-55a8-4d90-8f2c-ce40e6490618",
+            "status": "failed",
+            "file_name": "test_small.html"
+          }
+        ]
+      },
+      "success": true
+    }
+  },
+  "async_processing": {
+    "txt_large": {
+      "file_key": "txt_large",
+      "file_path": "test_files/multi_batch/test_large.txt",
+      "status_code": 200,
+      "task_id": "8b4affc2-0dda-48f1-b60d-60972d08daa9",
+      "task_status": {
+        "task_id": "8b4affc2-0dda-48f1-b60d-60972d08daa9",
+        "status": "completed"
+      },
+      "success": true
+    },
+    "csv_large": {
+      "file_key": "csv_large",
+      "file_path": "test_files/multi_batch/test_large.csv",
+      "status_code": 200,
+      "task_id": "7c5bc5fd-749a-41b3-a127-be8193ec8e33",
+      "task_status": {
+        "task_id": "7c5bc5fd-749a-41b3-a127-be8193ec8e33",
+        "status": "failed"
+      },
+      "success": true
+    },
+    "json_large": {
+      "file_key": "json_large",
+      "file_path": "test_files/multi_batch/test_large.json",
+      "status_code": 200,
+      "task_id": "d89ff31a-338c-444d-b951-ad04713a36cf",
+      "task_status": {
+        "task_id": "d89ff31a-338c-444d-b951-ad04713a36cf",
+        "status": "failed"
+      },
+      "success": true
+    },
+    "html_large": {
+      "file_key": "html_large",
+      "file_path": "test_files/multi_batch/test_large.html",
+      "status_code": 200,
+      "task_id": "1b752d32-5ad6-46ed-9560-96199bc293a1",
+      "task_status": {
+        "task_id": "1b752d32-5ad6-46ed-9560-96199bc293a1",
+        "status": "completed"
+      },
+      "success": true
+    }
+  }
+}
